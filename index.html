@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Kvartorio — подборка квартир в новостройках Тюмени</title>
+<meta name="description" content="Ответьте на 6 коротких вопросов — и получите персональную подборку квартир в новостройках Тюмени от риелтора Руслана Халимуллина. Бесплатно, комиссия 0 ₽.">
+<meta name="theme-color" content="#0A0806">
+<link rel="icon" href="logo_head.png">
+<!-- Превью ссылки в Telegram/VK/WhatsApp.
+     Абсолютный адрес подставлен автоматически скриптом _tools/build_publish.py -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kvartorio.github.io/kvartorio-quiz/">
+<meta property="og:image:width" content="1080">
+<meta property="og:image:height" content="1080">
+<meta property="og:title" content="Подборка квартир в новостройках Тюмени за 2 минуты">
+<meta property="og:description" content="6 вопросов → персональная подборка ЖК с ценами, сроками и честными минусами. Бесплатно, комиссия 0 ₽.">
+<meta property="og:image" content="https://kvartorio.github.io/kvartorio-quiz/logo.png">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  :root{
+    --bg:#0A0806;
+    --card:#151109;
+    --card2:#241F15;
+    --line:#3A3227;
+    --line-soft:#2C261D;
+    --gold:#E0B549;
+    --gold2:#C99B2F;
+    --gold-deep:#8A6A2E;
+    --gold-soft:rgba(224,181,73,.12);
+    --text:#F5EFE4;
+    --text-soft:#C7BFAF;
+    --muted:#8F8776;
+    --err:#E06C5A;
+    --radius:18px;
+    --serif:'Prata',Georgia,'Times New Roman',serif;
+    --sans:'Golos Text','Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{height:100%}
+  body{
+    min-height:100%;
+    background:
+      radial-gradient(1100px 500px at 50% -8%, rgba(224,181,73,.09), transparent 62%),
+      radial-gradient(800px 380px at 108% 112%, rgba(138,106,46,.07), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.55;
+    display:flex;justify-content:center;
+    padding:18px 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  .app{
+    width:100%;max-width:520px;position:relative;
+    display:flex;flex-direction:column;
+    min-height:calc(100dvh - 34px - env(safe-area-inset-bottom));
+  }
+  main{flex:1;display:flex;flex-direction:column}
+
+  /* ── шапка ── */
+  .head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .brand img{width:42px;height:42px;border-radius:12px;object-fit:cover;flex:none}
+  .brand-name{font-family:var(--serif);font-weight:400;font-size:16px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);line-height:1.1}
+  .brand-tag{font-size:11px;color:var(--muted);letter-spacing:.4px;margin-top:2px}
+  .pill{
+    font-size:11px;font-weight:600;letter-spacing:.6px;
+    color:var(--gold);background:var(--gold-soft);
+    border:1px solid rgba(224,181,73,.3);
+    padding:6px 12px;border-radius:99px;white-space:nowrap;flex:none;
+  }
+
+  /* ── полоса шага: назад + сегментный прогресс + счётчик ── */
+  .bar{display:none;align-items:center;gap:12px;margin-bottom:22px;min-height:36px}
+  .bar.on{display:flex}
+  .back{
+    width:36px;height:36px;flex:none;border-radius:50%;
+    border:1px solid var(--line);background:var(--card);color:var(--text-soft);
+    font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:border-color .18s,color .18s,background .18s;font-family:var(--sans);
+  }
+  .back:hover{border-color:var(--gold2);color:var(--gold);background:var(--card2)}
+  .back:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .segs{display:flex;gap:6px;flex:1}
+  .seg{height:4px;flex:1;border-radius:99px;background:var(--line-soft);transition:background .35s ease}
+  .seg.done{background:var(--gold2)}
+  .seg.on{background:var(--gold);box-shadow:0 0 0 1px rgba(224,181,73,.35)}
+  .step{font-size:11.5px;font-weight:700;letter-spacing:1px;color:var(--muted);white-space:nowrap;flex:none}
+  .step b{color:var(--gold)}
+
+  /* ── экраны ── */
+  .screen{display:none}
+  .screen.active{display:flex;flex-direction:column;flex:1;animation:rise .42s cubic-bezier(.22,1,.36,1)}
+  @media (prefers-reduced-motion: reduce){ .screen.active{animation:none} .seg{transition:none} }
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  .eyebrow{
+    font-size:11px;font-weight:700;letter-spacing:2.4px;text-transform:uppercase;color:var(--gold);
+    margin-bottom:12px;
+  }
+  h1{
+    font-family:var(--serif);font-weight:400;font-size:30px;line-height:1.24;letter-spacing:.2px;
+    margin-bottom:12px;color:var(--text);text-wrap:pretty;
+  }
+  .sub{color:var(--text-soft);font-size:15.5px;margin-bottom:22px;line-height:1.6}
+  .gold-rule{width:44px;height:2px;background:linear-gradient(90deg,var(--gold),transparent);border:none;margin:0 0 22px;border-radius:2px}
+
+  /* ── карточка эксперта ── */
+  .expert{
+    display:flex;gap:14px;align-items:center;
+    border:1px solid var(--line);border-radius:var(--radius);
+    padding:13px;margin-bottom:22px;background:var(--card);
+  }
+  .expert img{width:74px;height:74px;border-radius:14px;object-fit:cover;object-position:center 18%;flex:none}
+  .expert-name{font-family:var(--serif);font-weight:400;font-size:17px;margin-bottom:4px}
+  .expert-role{font-size:12.5px;color:var(--text-soft);line-height:1.45}
+
+  /* ── ответы ── */
+  .answers{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+  .answers.tiles{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .answer{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;position:relative;
+    background:var(--card);border:1.5px solid var(--line);border-radius:15px;
+    padding:15px 16px;color:var(--text);font-size:15.5px;font-weight:600;font-family:var(--sans);cursor:pointer;
+    transition:border-color .18s,background .18s,box-shadow .18s,transform .12s;
+    min-height:56px;
+  }
+  .answers.tiles .answer{
+    min-height:78px;align-items:flex-start;flex-direction:column;justify-content:center;
+    padding:14px 15px;gap:4px;
+  }
+  .answer:hover{border-color:var(--gold2);background:var(--card2)}
+  .answer:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .answer:active{transform:scale(.985)}
+  .answer.selected{border-color:var(--gold);background:var(--gold-soft);box-shadow:0 0 0 3px rgba(224,181,73,.12)}
+  .answer .letter{
+    font-family:var(--serif);color:var(--gold);font-size:13px;
+    width:26px;height:26px;flex:none;border-radius:50%;
+    border:1px solid rgba(224,181,73,.35);
+    display:flex;align-items:center;justify-content:center;
+    transition:background .18s,color .18s;
+  }
+  .answer.selected .letter{background:var(--gold);color:#1A140A;border-color:var(--gold)}
+  .pick-t{font-size:15.5px;font-weight:600;line-height:1.3}
+  .pick-note{font-size:11.5px;font-weight:400;color:var(--muted);line-height:1.35}
+  .answer .note{display:block;font-size:12.5px;font-weight:400;color:var(--muted);margin-top:3px}
+  .answer .txt{min-width:0;flex:1}
+  /* галочка выбранного */
+  .check{
+    position:absolute;top:12px;right:13px;
+    width:20px;height:20px;border-radius:50%;background:var(--gold);
+    display:none;align-items:center;justify-content:center;flex:none;
+  }
+  .check svg{width:11px;height:11px}
+  .answer.selected .check{display:flex}
+  .answers:not(.tiles) .answer.selected{padding-right:44px}
+
+  /* ── кнопки ── */
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
+    border:none;border-radius:15px;padding:17px;
+    background:linear-gradient(135deg,var(--gold2),var(--gold));
+    color:#1A140A;font-size:16px;font-weight:700;font-family:var(--sans);cursor:pointer;
+    letter-spacing:.2px;transition:transform .12s, filter .2s;
+    box-shadow:0 12px 28px -12px rgba(224,181,73,.35);
+  }
+  .btn:hover{filter:brightness(1.07)}
+  .btn:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  .btn:active{transform:scale(.98)}
+  .btn:disabled{opacity:.75;cursor:default}
+  .btn-note{font-size:11.5px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.5}
+
+  /* интро: кнопка прижата к низу, чтобы экран не выглядел пустым */
+  .intro-cta{margin-top:auto;padding-top:26px}
+
+  /* ── форма ── */
+  /* ВАЖНО: здесь НЕЛЬЗЯ задавать display — иначе правило перебьёт .screen{display:none}
+     и все созданные экраны вопросов будут видны одновременно. */
+  .q-screen{min-height:0}
+  .q-screen h1{font-family:var(--sans);font-weight:600;font-size:25px;line-height:1.3;letter-spacing:-.3px;margin-bottom:14px}
+  label{display:block;font-size:11.5px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:14px 0 7px}
+  input[type=text],input[type=tel]{
+    width:100%;background:var(--card);border:1.5px solid var(--line);border-radius:12px;
+    padding:14px 15px;color:var(--text);font-size:16px;outline:none;
+    transition:border-color .18s,box-shadow .18s;font-family:var(--sans);font-weight:500;
+  }
+  input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(224,181,73,.10)}
+  input::placeholder{color:#6B6455}
+  .check-row{display:flex;align-items:flex-start;gap:10px;margin-top:16px;font-size:13.5px;color:var(--text-soft);cursor:pointer;line-height:1.5;text-transform:none;letter-spacing:0;font-weight:400}
+  .check-row input{margin-top:2px;accent-color:var(--gold);width:18px;height:18px;flex:none}
+  .check-row a{color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(224,181,73,.45)}
+  .check-row a:hover{border-bottom-color:var(--gold)}
+  .consent-box{margin-top:16px;border:1px solid var(--line);border-radius:14px;padding:13px 14px;background:var(--card)}
+  .consent-box .check-row{margin-top:0;font-size:13px;line-height:1.55}
+  .consent-note{font-size:11.5px;color:var(--muted);margin-top:7px;padding-left:28px;line-height:1.5}
+  .consent-note a{color:var(--muted);text-decoration:none;border-bottom:1px dotted rgba(143,135,118,.55)}
+  .err{display:none;color:var(--err);font-size:13px;margin-top:10px}
+  .err.on{display:block}
+  .form-cta{margin-top:auto;padding-top:22px}
+  .legal{margin-top:18px;padding-top:14px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--muted);text-align:center;line-height:1.55}
+
+  /* ── финал ── */
+  .done-mark{
+    width:64px;height:64px;border-radius:50%;
+    background:var(--gold-soft);border:1.5px solid rgba(224,181,73,.4);
+    display:flex;align-items:center;justify-content:center;margin-bottom:18px;
+  }
+  .done-mark svg{width:30px;height:30px}
+  .steps{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);padding:16px 18px;margin:18px 0 6px}
+  .steps div{display:flex;gap:12px;font-size:14px;color:var(--text-soft);padding:7px 0}
+  .steps b{color:var(--text)}
+  .steps .n{font-family:var(--serif);color:var(--gold);flex:none;width:18px}
+  .link-btn{
+    display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;
+    border:1.5px solid var(--line);border-radius:15px;padding:15px;background:var(--card);
+    color:var(--text);font-size:15px;font-weight:600;margin-top:11px;
+    transition:border-color .18s,background .18s;
+  }
+  .link-btn:hover{border-color:var(--gold2);background:var(--card2)}
+  .link-btn.gold{border-color:var(--gold);background:var(--gold-soft);color:var(--gold)}
+  .fallback{display:none;margin-top:16px;border:1px solid rgba(224,108,90,.4);background:rgba(224,108,90,.07);border-radius:15px;padding:14px 16px;font-size:14px;color:var(--text-soft)}
+  .fallback.on{display:block}
+  .fallback a{color:var(--gold);font-weight:700}
+  .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(26,20,10,.3);border-top-color:#1A140A;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── подвал ── */
+  .foot{
+    margin-top:26px;padding-top:14px;border-top:1px solid var(--line-soft);
+    font-size:11px;color:var(--muted);text-align:center;line-height:1.6;
+  }
+  .foot b{color:var(--text-soft);font-weight:600}
+
+  @media (max-width:420px){
+    h1{font-size:26px}
+    .q-screen h1{font-size:22.5px}
+    .brand img{width:38px;height:38px}
+    .brand-name{font-size:15px;letter-spacing:2.4px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="head">
+    <div class="brand">
+      <img src="logo.png" alt="Kvartorio">
+      <div>
+        <div class="brand-name">Kvartorio</div>
+        <div class="brand-tag">новостройки Тюмени</div>
+      </div>
+    </div>
+    <div class="pill">комиссия 0 ₽</div>
+  </div>
+
+  <div class="bar" id="bar">
+    <button class="back" id="backBtn" onclick="goBack()" aria-label="Назад">&#8592;</button>
+    <div class="segs" id="segs"></div>
+    <div class="step" id="step"></div>
+  </div>
+
+  <main id="main">
+    <!-- ЭКРАН 0: ИНТРО -->
+    <div class="screen active" id="s-intro">
+      <div class="eyebrow">Тюмень · новостройки · 2026</div>
+      <h1>Подберём квартиру<br>под ваш бюджет и район</h1>
+      <hr class="gold-rule">
+
+      <div class="expert">
+        <img src="ruslan.jpg" alt="Руслан Халимуллин">
+        <div class="expert-info">
+          <div class="expert-name">Руслан Халимуллин</div>
+          <div class="expert-role">риелтор · АН «Сова»</div>
+        </div>
+      </div>
+
+      <div class="why">
+        Подборка бесплатная: за приведённого клиента платит застройщик, а не вы.
+        Комиссия по новостройкам — 0 ₽. Работаю внутри АН «Сова», сделка идёт с юридическим сопровождением.
+      </div>
+
+      <div class="intro-cta">
+        <button class="btn" onclick="startQuiz()">Подобрать квартиру</button>
+        <div class="btn-note">6 вопросов · 2 минуты · бесплатно</div>
+      </div>
+    </div>
+
+    <!-- КОНТАКТЫ -->
+    <div class="screen" id="s-contact">
+      <div class="q-screen">
+        <div class="eyebrow">Последний шаг</div>
+        <h1>Как с вами связаться?</h1>
+        <label>Имя</label>
+        <input type="text" id="f-name" placeholder="Как к вам обращаться" autocomplete="name">
+        <label>Телефон</label>
+        <input type="tel" id="f-phone" inputmode="tel" placeholder="+7 (___) ___-__-__" autocomplete="tel">
+        <label>Или Telegram</label>
+        <input type="text" id="f-tg" placeholder="@username" autocomplete="off">
+        <div class="err" id="f-err">Укажите телефон или ник в Telegram — иначе я не смогу отправить подборку.</div>
+        <label class="check-row"><input type="checkbox" id="f-pdf" checked> Подарок: PDF «5 ошибок при покупке новостройки»</label>
+        <div class="consent-box">
+          <label class="check-row"><input type="checkbox" id="f-consent"> <span>Я принимаю <a href="politika.html" target="_blank" rel="noopener">условия Политики конфиденциальности</a> и даю согласие на обработку персональных данных.</span></label>
+          <div class="consent-note">Согласие можно отозвать в любой момент — письмом на <a href="mailto:kvartorio@ya.ru">kvartorio@ya.ru</a>.</div>
+        </div>
+        <div class="err" id="f-err-consent">Без согласия на обработку персональных данных заявку принять нельзя.</div>
+        <div class="form-cta">
+          <button class="btn" id="f-submit" onclick="submitLead()">Отправить заявку</button>
+          <div class="btn-note">Никаких рассылок. Отвечаю лично, в течение дня.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ГОТОВО -->
+    <div class="screen" id="s-done">
+      <div class="done-mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5l5 5L19.5 7" stroke="#E0B549" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h1>Заявка принята</h1>
+      <div class="sub" style="margin-bottom:0">Что происходит дальше:</div>
+      <div class="steps">
+        <div><span class="n">1</span><span><b>Я вручную</b> отбираю квартиры под ваши критерии из актуальной базы застройщиков.</span></div>
+        <div><span class="n">2</span><span><b>В течение дня</b> присылаю подборку с ценами, сроками сдачи и честными минусами каждого варианта.</span></div>
+        <div><span class="n">3</span><span>Если вариант понравится — <b>организую показ</b> и сопровождение сделки. Комиссия — 0 ₽.</span></div>
+      </div>
+      <a class="link-btn gold" id="pdf-btn" href="#" target="_blank" style="display:none">Скачать PDF «5 ошибок при покупке»</a>
+      <a class="link-btn" id="tg-btn" href="#" target="_blank" style="display:none">Telegram-канал Kvartorio</a>
+      <div class="fallback" id="fallback"></div>
+    </div>
+  </main>
+
+  <div class="foot">
+    <b>Руслан Халимуллин</b> · риелтор, АН «Сова» · Тюмень<br>
+    Новостройки · комиссия 0 ₽ · подборку собираю лично
+  </div>
+</div>
+
+<script>
+/* ═══════════ КОНФИГ ═══════════
+ * TG_BOT_TOKEN — уже вписан (см. ТОКЕН_БОТА.txt).
+ * TG_CHAT_ID  — впишите ваш chat_id (инструкция в ТОКЕН_БОТА.txt). Без него заявки НЕ придут.
+ * PDF_URL / TG_CHANNEL / TG_DIRECT — впишите, когда готовы.
+ * ═══════════════════════════════ */
+const CONFIG = {
+  TG_BOT_TOKEN: "8456384811:AAF1UP3VW_TfllPxp_80pzjPne0a4VDdv9g",
+  TG_CHAT_ID: "",
+  TG_BOT_USERNAME: "kvartorio_bot",
+  GOOGLE_FORM_ACTION: "",
+  GOOGLE_ENTRIES: { name:"", phone:"", tg:"", q1:"", q2:"", q3:"", district:"", q4:"", q5:"", utm:"", pdf:"" },
+  PDF_URL: "https://kvartorio.github.io/kvartorio-quiz/5-oshibok-pri-pokupke-novostroyki.pdf",
+  TG_CHANNEL: "",
+  TG_DIRECT: ""
+};
+
+/* layout: "list" — строки с буквами, "tiles" — плитки 2 в ряд */
+const QUESTIONS = [
+  { key:"q1", title:"Для чего вам квартира?", layout:"list", answers:[
+    {t:"Для жизни", note:"собственное жильё"},
+    {t:"Для семьи", note:"важны школы, детсады, дворы"},
+    {t:"Как инвестиция", note:"под сдачу или перепродажу"},
+    {t:"Пока изучаю варианты", note:"выбираю, спешить некуда"} ]},
+  { key:"q2", title:"Какой бюджет?", layout:"tiles", answers:[
+    {t:"До 5,5 млн ₽"},
+    {t:"5,5–8 млн ₽"},
+    {t:"8–11 млн ₽"},
+    {t:"От 11 млн ₽"} ]},
+  { key:"q3", title:"Сколько комнат нужно?", layout:"tiles", answers:[
+    {t:"Студия"},
+    {t:"Одна комната"},
+    {t:"Две"},
+    {t:"Три и больше"},
+    {t:"Посоветуйте", note:"подберём формат под бюджет"} ]},
+  { key:"district", title:"В каком районе Тюмени хотите купить?", layout:"list", answers:[
+    {t:"Центр / КПД / Район ВУЗов"},
+    {t:"Зарека"},
+    {t:"Тюменская Слобода / Червишевский тракт / Комарово"},
+    {t:"Плеханово / Московский тракт"},
+    {t:"Дом Обороны / ДОК"},
+    {t:"Восточный"},
+    {t:"Пригород"},
+    {t:"Не определился / Рассмотрю все варианты"} ]},
+  { key:"q4", title:"Что важнее всего?", layout:"tiles", answers:[
+    {t:"Инфраструктура", note:"школы, детсады, поликлиники"},
+    {t:"Транспорт и парковка", note:"дорога до центра, место для машины"},
+    {t:"Тишина и зелень", note:"дальше от трасс, ближе к паркам"},
+    {t:"Максимальная выгода", note:"лучшая цена за метр"} ]},
+  { key:"q5", title:"Когда планируете покупку?", layout:"tiles", answers:[
+    {t:"В течение 1–2 месяцев"},
+    {t:"Через 3–6 месяцев"},
+    {t:"Через полгода и позже"},
+    {t:"Пока просто смотрю"} ]}
+];
+
+const LETTERS = ["А","Б","В","Г","Д","Е","Ж","З"];
+const state = { answers:{}, screen:"intro", utm:{} };
+(function(){
+  const p = new URLSearchParams(location.search);
+  ["utm_source","utm_medium","utm_campaign","utm_content","ref"].forEach(k=>{
+    const v = p.get(k); if(v) state.utm[k] = v;
+  });
+})();
+
+const app   = document.querySelector(".app");
+const bar   = document.getElementById("bar");
+const segs  = document.getElementById("segs");
+const step  = document.getElementById("step");
+const main  = document.getElementById("main");
+
+/* сегменты прогресса — создаются один раз */
+QUESTIONS.forEach(()=>{ const d = document.createElement("div"); d.className = "seg"; segs.appendChild(d); });
+const segEls = segs.querySelectorAll(".seg");
+
+function setProgress(idx){
+  /* idx: -1 = до старта, 0..N-1 = вопрос, N = контакты/финал */
+  segEls.forEach((el,i)=>{
+    el.className = "seg" + (i < idx ? " done" : i === idx ? " on" : "");
+  });
+  if(idx >= QUESTIONS.length){
+    step.innerHTML = "ФИНАЛ";
+  } else {
+    step.innerHTML = "<b>" + (idx + 1) + "</b>/" + QUESTIONS.length;
+  }
+}
+
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  const el = document.getElementById(id);
+  el.style.animation = "none"; void el.offsetWidth; el.style.animation = "";
+  el.classList.add("active");
+  /* на финальном экране возвращаться некуда — прячем кнопку «назад» */
+  document.getElementById("backBtn").style.visibility = (id === "s-done") ? "hidden" : "visible";
+  window.scrollTo(0,0);
+}
+
+function startQuiz(){
+  bar.classList.add("on");
+  renderQuestion(0);
+}
+
+/* ── «Назад»: с 1-го вопроса → на интро, с любого вопроса → на предыдущий,
+      с контактов → на последний вопрос. ── */
+function goBack(){
+  if(state.screen === "contact"){ renderQuestion(QUESTIONS.length-1); return; }
+  if(typeof state.screen === "number"){
+    if(state.screen > 0) renderQuestion(state.screen-1);
+    else showIntro();
+  }
+}
+function showIntro(){
+  state.screen = "intro";
+  bar.classList.remove("on");
+  show("s-intro");
+}
+
+function renderQuestion(i){
+  state.screen = i;
+  let s = document.getElementById("s-q"+i);
+  if(!s){
+    s = document.createElement("div");
+    s.className = "screen q-screen"; s.id = "s-q"+i;
+    const q = QUESTIONS[i];
+    const tiles = q.layout === "tiles";
+    const rows = q.answers.map((a,ai)=>{
+      const sel = state.answers[q.key]===a.t ? " selected" : "";
+      const check = '<span class="check"><svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5l5 5L19.5 7" stroke="#1A140A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+      if(tiles){
+        return '<button class="answer'+sel+'" data-i="'+ai+'" onclick="pick('+i+','+ai+',this)">' +
+               '<span class="pick-t">'+a.t+'</span>' +
+               (a.note ? '<span class="pick-note">'+a.note+'</span>' : '') + check + '</button>';
+      }
+      const note = a.note ? '<span class="note">'+a.note+'</span>' : '';
+      return '<button class="answer'+sel+'" data-i="'+ai+'" onclick="pick('+i+','+ai+',this)">' +
+             '<span class="letter">'+LETTERS[ai]+'</span><span class="txt">'+a.t+note+'</span>' + check + '</button>';
+    }).join("");
+    s.innerHTML =
+      '<div class="eyebrow">Вопрос '+(i+1)+' из '+QUESTIONS.length+'</div>' +
+      '<h1>'+q.title+'</h1>' +
+      '<div class="answers'+(tiles?" tiles":"")+'">'+rows+'</div>';
+    main.insertBefore(s, document.getElementById("s-contact"));
+  }
+  if(state.answers[QUESTIONS[i].key]){
+    const idx = QUESTIONS[i].answers.findIndex(a=>a.t===state.answers[QUESTIONS[i].key]);
+    s.querySelectorAll(".answer").forEach((b,bi)=>b.classList.toggle("selected", bi===idx));
+  }
+  setProgress(i);
+  show("s-q"+i);
+}
+
+function pick(qi, ai, btn){
+  document.querySelectorAll("#s-q"+qi+" .answer").forEach(b=>b.classList.remove("selected"));
+  btn.classList.add("selected");
+  state.answers[QUESTIONS[qi].key] = QUESTIONS[qi].answers[ai].t;
+  setTimeout(()=>{
+    if(qi+1 < QUESTIONS.length) renderQuestion(qi+1);
+    else { state.screen = "contact"; setProgress(QUESTIONS.length); show("s-contact"); }
+  }, 280);
+}
+
+/* ── маска телефона: +7 (999) 123-45-67 ── */
+function maskPhone(el){
+  let d = el.value.replace(/\D/g,"");
+  if(!d){ el.value = ""; return; }
+  if(d[0] === "8") d = "7" + d.slice(1);
+  if(d[0] !== "7") d = "7" + d;
+  d = d.slice(0,11);
+  let out = "+7";
+  if(d.length > 1) out += " (" + d.slice(1,4);
+  if(d.length >= 5) out += ") " + d.slice(4,7);
+  if(d.length >= 8) out += "-" + d.slice(7,9);
+  if(d.length >= 10) out += "-" + d.slice(9,11);
+  el.value = out;
+}
+
+function validateContact(){
+  const phone = document.getElementById("f-phone").value.trim();
+  const tg = document.getElementById("f-tg").value.trim();
+  const err = document.getElementById("f-err");
+  const consent = document.getElementById("f-consent");
+  const errConsent = document.getElementById("f-err-consent");
+  const phoneOk = phone.replace(/\D/g,"").length >= 11;
+  const tgOk = tg.replace(/[^A-Za-z0-9_@]/g,"").length >= 4;
+  let ok = true;
+  if(!phoneOk && !tgOk){ err.classList.add("on"); ok = false; } else err.classList.remove("on");
+  if(!consent.checked){ errConsent.classList.add("on"); ok = false; } else errConsent.classList.remove("on");
+  if(!ok){
+    const first = document.querySelector(".err.on");
+    if(first) first.scrollIntoView({block:"center", behavior:"smooth"});
+    return null;
+  }
+  return {
+    name: document.getElementById("f-name").value.trim(),
+    phone: phone, tg: tg,
+    pdf: document.getElementById("f-pdf").checked
+  };
+}
+
+function leadText(c){
+  const utmStr = Object.keys(state.utm).map(k=>k+"="+state.utm[k]).join(", ") || "прямая ссылка";
+  return "НОВАЯ ЗАЯВКА С КВИЗА\n" +
+    "Имя: " + (c.name || "—") + "\n" +
+    "Тел: " + (c.phone || "—") + "\n" +
+    "TG: " + (c.tg || "—") + "\n" +
+    "Цель: " + state.answers.q1 + "\n" +
+    "Бюджет: " + state.answers.q2 + "\n" +
+    "Комнаты: " + state.answers.q3 + "\n" +
+    "Район: " + state.answers.district + "\n" +
+    "Важно: " + state.answers.q4 + "\n" +
+    "Срок: " + state.answers.q5 + "\n" +
+    "PDF: " + (c.pdf ? "да" : "нет") + "\n" +
+    "Согласие на ПДн: да\n" +
+    "Источник: " + utmStr;
+}
+
+async function submitLead(){
+  const c = validateContact(); if(!c) return;
+  const btn = document.getElementById("f-submit");
+  btn.innerHTML = '<span class="spinner"></span>Отправляю…'; btn.disabled = true;
+
+  const utmStr = Object.keys(state.utm).map(k=>k+"="+state.utm[k]).join(", ") || "прямая ссылка";
+  const msg = leadText(c);
+
+  let ok = false;
+  try{
+    if(CONFIG.TG_BOT_TOKEN && CONFIG.TG_CHAT_ID){
+      const r = await fetch("https://api.telegram.org/bot"+CONFIG.TG_BOT_TOKEN+"/sendMessage", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ chat_id: CONFIG.TG_CHAT_ID, text: msg })
+      });
+      ok = r.ok;
+    }
+  }catch(e){ console.warn("tg", e); }
+  try{
+    if(CONFIG.GOOGLE_FORM_ACTION){
+      const e = CONFIG.GOOGLE_ENTRIES;
+      const fd = new URLSearchParams();
+      if(e.name)  fd.set("entry."+e.name,  c.name);
+      if(e.phone) fd.set("entry."+e.phone, c.phone);
+      if(e.tg)    fd.set("entry."+e.tg,    c.tg);
+      if(e.q1) fd.set("entry."+e.q1, state.answers.q1);
+      if(e.q2) fd.set("entry."+e.q2, state.answers.q2);
+      if(e.q3) fd.set("entry."+e.q3, state.answers.q3);
+      if(e.district) fd.set("entry."+e.district, state.answers.district);
+      if(e.q4) fd.set("entry."+e.q4, state.answers.q4);
+      if(e.q5) fd.set("entry."+e.q5, state.answers.q5);
+      if(e.utm) fd.set("entry."+e.utm, utmStr);
+      if(e.pdf) fd.set("entry."+e.pdf, c.pdf?"да":"нет");
+      await fetch(CONFIG.GOOGLE_FORM_ACTION+"?"+fd.toString(), { mode:"no-cors", method:"POST" });
+      ok = true;
+    }
+  }catch(e){ console.warn("gform", e); }
+
+  state.screen = "done";
+  setProgress(QUESTIONS.length + 1);
+  show("s-done");
+  const pdfBtn = document.getElementById("pdf-btn"), tgBtn = document.getElementById("tg-btn");
+  if(CONFIG.PDF_URL){ pdfBtn.href = CONFIG.PDF_URL; pdfBtn.style.display = "flex"; }
+  if(CONFIG.TG_CHANNEL){ tgBtn.href = CONFIG.TG_CHANNEL; tgBtn.style.display = "flex"; }
+
+  if(!ok){
+    /* Страховка от потери заявки: кнопка «отправить в Telegram» с готовым текстом.
+       Если уведомление боту не ушло — заявка всё равно дойдёт до Руслана. */
+    const fb = document.getElementById("fallback");
+    fb.classList.add("on");
+    const deep = "https://t.me/" + CONFIG.TG_BOT_USERNAME + "?text=" + encodeURIComponent(msg);
+    fb.innerHTML = "Автоматическая отправка не прошла. Нажмите кнопку ниже — заявка уйдёт мне в Telegram " +
+      "одним сообщением, ничего печатать не нужно.<br><br>" +
+      '<a class="link-btn gold" style="margin-top:0" href="' + deep + '" target="_blank" rel="noopener">Отправить заявку в Telegram</a>';
+  }
+}
+
+/* ── клавиатура: 1..9 — выбрать ответ, Backspace — назад ── */
+document.addEventListener("keydown", e=>{
+  if(e.target.matches("input")) return;
+  if(e.key === "Backspace"){ e.preventDefault(); goBack(); return; }
+  const n = parseInt(e.key, 10);
+  if(n >= 1 && n <= 9 && typeof state.screen === "number"){
+    const btn = document.querySelectorAll("#s-q" + state.screen + " .answer")[n-1];
+    if(btn) btn.click();
+  }
+});
+
+/* ── маска телефона ── */
+document.getElementById("f-phone").addEventListener("input", function(){ maskPhone(this); });
+</script>
+</body>
+</html>

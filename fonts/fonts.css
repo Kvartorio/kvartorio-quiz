@@ -1,0 +1,6 @@
+/* Локальные шрифты, субсеттированные под символы этой страницы.
+   Сгенерировано _tools/build_publish.py — не редактировать вручную. */
+@font-face{font-family:'Prata';font-style:normal;font-weight:400;font-display:swap;
+  src:url('prata.woff2') format('woff2')}
+@font-face{font-family:'Golos Text';font-style:normal;font-weight:400 900;font-display:swap;
+  src:url('golos.woff2') format('woff2-variations')}
