@@ -550,6 +550,31 @@ function leadText(c){
     "Источник: " + utmStr;
 }
 
+/* Отправка заявки боту. api.telegram.org из РФ отвечает нестабильно: бывает, что
+   соединение просто висит без ответа. Поэтому — три попытки по 8 секунд с паузой.
+   Без таймаута зависший fetch держал бы клиента на «Отправляю…» до таймаута браузера. */
+async function tgSend(text){
+  const url = "https://api.telegram.org/bot" + CONFIG.TG_BOT_TOKEN + "/sendMessage";
+  for(let attempt = 1; attempt <= 3; attempt++){
+    try{
+      const ctl = new AbortController();
+      const timer = setTimeout(()=>ctl.abort(), 8000);
+      const r = await fetch(url, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ chat_id: CONFIG.TG_CHAT_ID, text: text }),
+        signal: ctl.signal
+      });
+      clearTimeout(timer);
+      if(r.ok) return true;
+      console.warn("tg: попытка " + attempt + " — HTTP " + r.status);
+    }catch(e){
+      console.warn("tg: попытка " + attempt + " не прошла", e);
+    }
+    if(attempt < 3) await new Promise(res => setTimeout(res, 1200));
+  }
+  return false;
+}
+
 async function submitLead(){
   const c = validateContact(); if(!c) return;
   const btn = document.getElementById("f-submit");
@@ -559,15 +584,9 @@ async function submitLead(){
   const msg = leadText(c);
 
   let ok = false;
-  try{
-    if(CONFIG.TG_BOT_TOKEN && CONFIG.TG_CHAT_ID){
-      const r = await fetch("https://api.telegram.org/bot"+CONFIG.TG_BOT_TOKEN+"/sendMessage", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ chat_id: CONFIG.TG_CHAT_ID, text: msg })
-      });
-      ok = r.ok;
-    }
-  }catch(e){ console.warn("tg", e); }
+  if(CONFIG.TG_BOT_TOKEN && CONFIG.TG_CHAT_ID){
+    ok = await tgSend(msg);
+  }
   try{
     if(CONFIG.GOOGLE_FORM_ACTION){
       const e = CONFIG.GOOGLE_ENTRIES;
@@ -597,12 +616,13 @@ async function submitLead(){
 
   if(!ok){
     /* Страховка от потери заявки: кнопка «отправить в Telegram» с готовым текстом.
-       Если уведомление боту не ушло — заявка всё равно дойдёт до Руслана. */
+       Если уведомление боту не ушло (нет сети до Telegram, таймаут, сбой) —
+       заявка всё равно дойдёт до Руслана, клиенту остаётся одно нажатие. */
     const fb = document.getElementById("fallback");
     fb.classList.add("on");
     const deep = "https://t.me/" + CONFIG.TG_BOT_USERNAME + "?text=" + encodeURIComponent(msg);
-    fb.innerHTML = "Автоматическая отправка не прошла. Нажмите кнопку ниже — заявка уйдёт мне в Telegram " +
-      "одним сообщением, ничего печатать не нужно.<br><br>" +
+    fb.innerHTML = "<b>Остался один шаг.</b> Нажмите кнопку ниже — заявка уйдёт мне в Telegram " +
+      "одним готовым сообщением. Печатать ничего не нужно.<br><br>" +
       '<a class="link-btn gold" style="margin-top:0" href="' + deep + '" target="_blank" rel="noopener">Отправить заявку в Telegram</a>';
   }
 }
