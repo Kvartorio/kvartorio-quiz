@@ -296,6 +296,9 @@
         <input type="tel" id="f-phone" inputmode="tel" placeholder="+7 (___) ___-__-__" autocomplete="tel">
         <label>Или Telegram</label>
         <input type="text" id="f-tg" placeholder="@username" autocomplete="off">
+        <!-- Приманка для ботов: поле скрыто от людей, автозаполнялки его заполняют.
+             Если значение пришло — прокси молча принимает заявку, но никуда не шлёт. -->
+        <input type="text" id="f-hp" name="f-hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
         <div class="err" id="f-err">Укажите телефон или ник в Telegram — иначе я не смогу отправить подборку.</div>
         <label class="check-row"><input type="checkbox" id="f-pdf" checked> Подарок: PDF «5 ошибок при покупке новостройки»</label>
         <div class="consent-box">
@@ -336,16 +339,15 @@
 
 <script>
 /* ═══════════ КОНФИГ ═══════════
- * TG_BOT_TOKEN — уже вписан (см. ТОКЕН_БОТА.txt).
- * TG_CHAT_ID  — впишите ваш chat_id (инструкция в ТОКЕН_БОТА.txt). Без него заявки НЕ придут.
+ * WORKER_URL — адрес прокси на Cloudflare Workers, который отправляет заявки
+ *   в Telegram. Токен бота лежит в секретах прокси и в браузер не попадает:
+ *   https://kvartorio-lead-proxy.<аккаунт>.workers.dev
+ *   Пока поле пустое, заявка уйдёт только кнопкой-страховкой в Telegram.
  * PDF_URL / TG_CHANNEL / TG_DIRECT — впишите, когда готовы.
  * ═══════════════════════════════ */
 const CONFIG = {
-  TG_BOT_TOKEN: "8456384811:AAF1UP3VW_TfllPxp_80pzjPne0a4VDdv9g",
-  TG_CHAT_ID: "7951146578",
+  WORKER_URL: "https://kvartorio-lead-proxy.kvartorio.workers.dev",
   TG_BOT_USERNAME: "kvartorio_bot",
-  GOOGLE_FORM_ACTION: "",
-  GOOGLE_ENTRIES: { name:"", phone:"", tg:"", q1:"", q2:"", q3:"", district:"", q4:"", q5:"", utm:"", pdf:"" },
   PDF_URL: "https://kvartorio.github.io/kvartorio-quiz/5-oshibok-pri-pokupke-novostroyki.pdf",
   TG_CHANNEL: "",
   TG_DIRECT: ""
@@ -391,7 +393,9 @@ const QUESTIONS = [
 ];
 
 const LETTERS = ["А","Б","В","Г","Д","Е","Ж","З"];
-const state = { answers:{}, screen:"intro", utm:{} };
+/* t0 — момент старта квиза. Уходит на прокси как elapsed: если заявка пришла
+   быстрее, чем человек физически проходит 6 вопросов, это бот. */
+const state = { answers:{}, screen:"intro", utm:{}, t0:0 };
 (function(){
   const p = new URLSearchParams(location.search);
   ["utm_source","utm_medium","utm_campaign","utm_content","ref"].forEach(k=>{
@@ -432,6 +436,7 @@ function show(id){
 }
 
 function startQuiz(){
+  state.t0 = Date.now();
   bar.classList.add("on");
   renderQuestion(0);
 }
@@ -533,6 +538,9 @@ function validateContact(){
   };
 }
 
+/* Текст заявки — только для кнопки-страховки: она открывает Telegram с готовым
+   сообщением. Боевую заявку текст собирает прокси, а не браузер: так со стороны
+   клиента нельзя подделать структуру или дописать «согласие получено». */
 function leadText(c){
   const utmStr = Object.keys(state.utm).map(k=>k+"="+state.utm[k]).join(", ") || "прямая ссылка";
   return "НОВАЯ ЗАЯВКА С КВИЗА\n" +
@@ -550,25 +558,48 @@ function leadText(c){
     "Источник: " + utmStr;
 }
 
-/* Отправка заявки боту. api.telegram.org из РФ отвечает нестабильно: бывает, что
-   соединение просто висит без ответа. Поэтому — три попытки по 8 секунд с паузой.
-   Без таймаута зависший fetch держал бы клиента на «Отправляю…» до таймаута браузера. */
-async function tgSend(text){
-  const url = "https://api.telegram.org/bot" + CONFIG.TG_BOT_TOKEN + "/sendMessage";
+/* Заявка для прокси: структура, а не готовый текст. */
+function leadPayload(c){
+  return {
+    name: c.name,
+    phone: c.phone,
+    tg: c.tg,
+    answers: {
+      q1: state.answers.q1, q2: state.answers.q2, q3: state.answers.q3,
+      district: state.answers.district, q4: state.answers.q4, q5: state.answers.q5
+    },
+    pdf: c.pdf,
+    consent: true,
+    utm: Object.keys(state.utm).map(k=>k+"="+state.utm[k]).join(", "),
+    elapsed: state.t0 ? Date.now() - state.t0 : 0,
+    hp: (document.getElementById("f-hp") || {}).value || ""
+  };
+}
+
+/* Отправка заявки через прокси на Cloudflare Workers.
+   Токен бота живёт в секретах прокси и в браузер не попадает.
+   Прокси ходит в Telegram по нестабильному из РФ адресу, поэтому — три попытки
+   по 8 секунд: без таймаута зависший запрос держал бы клиента на «Отправляю…»
+   до таймаута браузера. Успех показываем только при честном ok от прокси. */
+async function sendLead(payload){
+  if(!CONFIG.WORKER_URL) return false;
   for(let attempt = 1; attempt <= 3; attempt++){
     try{
       const ctl = new AbortController();
       const timer = setTimeout(()=>ctl.abort(), 8000);
-      const r = await fetch(url, {
+      const r = await fetch(CONFIG.WORKER_URL, {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ chat_id: CONFIG.TG_CHAT_ID, text: text }),
+        body: JSON.stringify(payload),
         signal: ctl.signal
       });
       clearTimeout(timer);
-      if(r.ok) return true;
-      console.warn("tg: попытка " + attempt + " — HTTP " + r.status);
+      if(r.ok){
+        const data = await r.json().catch(()=>null);
+        if(data && data.ok) return true;
+      }
+      console.warn("lead: попытка " + attempt + " — HTTP " + r.status);
     }catch(e){
-      console.warn("tg: попытка " + attempt + " не прошла", e);
+      console.warn("lead: попытка " + attempt + " не прошла", e);
     }
     if(attempt < 3) await new Promise(res => setTimeout(res, 1200));
   }
@@ -580,32 +611,8 @@ async function submitLead(){
   const btn = document.getElementById("f-submit");
   btn.innerHTML = '<span class="spinner"></span>Отправляю…'; btn.disabled = true;
 
-  const utmStr = Object.keys(state.utm).map(k=>k+"="+state.utm[k]).join(", ") || "прямая ссылка";
   const msg = leadText(c);
-
-  let ok = false;
-  if(CONFIG.TG_BOT_TOKEN && CONFIG.TG_CHAT_ID){
-    ok = await tgSend(msg);
-  }
-  try{
-    if(CONFIG.GOOGLE_FORM_ACTION){
-      const e = CONFIG.GOOGLE_ENTRIES;
-      const fd = new URLSearchParams();
-      if(e.name)  fd.set("entry."+e.name,  c.name);
-      if(e.phone) fd.set("entry."+e.phone, c.phone);
-      if(e.tg)    fd.set("entry."+e.tg,    c.tg);
-      if(e.q1) fd.set("entry."+e.q1, state.answers.q1);
-      if(e.q2) fd.set("entry."+e.q2, state.answers.q2);
-      if(e.q3) fd.set("entry."+e.q3, state.answers.q3);
-      if(e.district) fd.set("entry."+e.district, state.answers.district);
-      if(e.q4) fd.set("entry."+e.q4, state.answers.q4);
-      if(e.q5) fd.set("entry."+e.q5, state.answers.q5);
-      if(e.utm) fd.set("entry."+e.utm, utmStr);
-      if(e.pdf) fd.set("entry."+e.pdf, c.pdf?"да":"нет");
-      await fetch(CONFIG.GOOGLE_FORM_ACTION+"?"+fd.toString(), { mode:"no-cors", method:"POST" });
-      ok = true;
-    }
-  }catch(e){ console.warn("gform", e); }
+  const ok = await sendLead(leadPayload(c));
 
   state.screen = "done";
   setProgress(QUESTIONS.length + 1);
@@ -616,7 +623,7 @@ async function submitLead(){
 
   if(!ok){
     /* Страховка от потери заявки: кнопка «отправить в Telegram» с готовым текстом.
-       Если уведомление боту не ушло (нет сети до Telegram, таймаут, сбой) —
+       Если прокси не достучался до Telegram (таймаут, сбой, лимит) —
        заявка всё равно дойдёт до Руслана, клиенту остаётся одно нажатие. */
     const fb = document.getElementById("fallback");
     fb.classList.add("on");
