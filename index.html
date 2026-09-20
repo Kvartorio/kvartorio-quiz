@@ -361,20 +361,23 @@ const CONFIG = {
   /* Адреса прокси, куда уходит заявка. Клиент проверяет все сразу при открытии
      страницы и на отправке берёт самый быстрый живой. Порядок в списке ни на что
      не влияет — можно смело держать здесь и рабочий адрес, и запасные.
+     Адреса, которые ещё не развёрнуты, не мешают: проверка считает живым только
+     ответ 405/204/200 (PROBE_OK_STATUS), а неразвёрнутый проект отвечает 404.
 
-     Как это устроено сейчас (20.09.2026). Основной путь — Vercel: одно плечо,
-     телефон → <проект>.vercel.app/api/submit → api.telegram.org. Проверено с
-     телефона Руслана: Vercel из его сети виден. Карта и платёжный аккаунт не
-     нужны. Инструкция — worker/ВЕРСЕЛ.md.
+     Как это устроено сейчас (20.09.2026). Замеры с телефона Руслана показали,
+     что видно из его сети, а что нет:
+       ДОСТУПНЫ: Netlify (280 мс), Deno Deploy (1118 мс), Vercel (651 мс),
+                 Яндекс Облако (211 мс), GitHub (324 мс)
+       НЕДОСТУПНЫ: api.telegram.org, Cloudflare Workers и Pages, Google Apps Script
+     Поэтому основной путь — Netlify: одно плечо, телефон → прокси → Telegram.
+     Рядом ставим Deno Deploy (адрес добавится, когда будет известен) — две
+     независимые площадки вместо одной. Инструкция — ЗАЛИТЬ_НА_ПРОКСИ/README.md.
 
-     Почему в списке остаётся Cloudflare. Диапазоны `*.workers.dev` в России
-     режут через DPI: с мобильного интернета запрос не отвечает вообще, соединение
-     висит до таймаута. Адрес оставлен как запасной: если Vercel когда-нибудь
-     перестанет отвечать, клиент возьмёт Cloudflare, если тот вдруг доступен.
-     На адреса, которые ещё не развёрнуты, клиент не поведётся: проверка считает
-     живым только ответ 405/204/200 (PROBE_OK_STATUS), а не любой подряд. */
+     Почему Cloudflare оставлен в списке. Это наш первый вариант, и он рабочий
+     технически — но `*.workers.dev` из России не виден вообще (соединение висит
+     до таймаута). Держим как напоминание, а не как рабочий адрес. */
   WORKER_URLS: [
-    "https://kvartorio-lead-proxy.vercel.app/api/submit",
+    "https://kvartorio-lead-proxy.netlify.app/api/submit",
     "https://kvartorio-lead-proxy.kvartorio.workers.dev"
   ],
   TG_BOT_USERNAME: "kvartorio_bot",
@@ -897,9 +900,9 @@ const CHECK_URLS = [
   "https://functions.yandexcloud.net/",                  // Яндекс Облако — ДОСТУПЕН с телефона (176 мс)
   "https://securelay.vercel.app/",                       // Vercel — ДОСТУПЕН с телефона (643 мс)
   "https://vercel.app/",                                 // Vercel, тот же рантайм
-  "https://www.cloudflare.com/",                         // Cloudflare на своём домене: отделяет блок по имени от блока по адресам
-  "https://workers.dev/",                                // Cloudflare Workers — НЕДОСТУПЕН с телефона
-  "https://pages.dev/",                                  // Cloudflare Pages — та же семья адресов
+  "https://www.cloudflare.com/",                         // Cloudflare на своём домене — доступен, значит блок идёт по имени, а не по адресам
+  "https://kvartorio-lead-proxy.kvartorio.workers.dev/", // НАШ воркер на Cloudflare — НЕДОСТУПЕН с телефона
+  "https://pages.dev/",                                  // Cloudflare Pages — тоже недоступен
   "https://www.netlify.com/",                            // Netlify — сайт и CDN
   "https://app.netlify.com/",                            // Netlify — панель
   "https://fresh.deno.dev/",                             // Deno Deploy — РАНТАЙМ-домен *.deno.dev (это не то же, что deno.com!)
