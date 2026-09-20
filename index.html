@@ -222,6 +222,12 @@
   .fallback{display:none;margin-top:16px;border:1px solid rgba(224,108,90,.4);background:rgba(224,108,90,.07);border-radius:15px;padding:14px 16px;font-size:14px;color:var(--text-soft)}
   .fallback.on{display:block}
   .fallback a{color:var(--gold);font-weight:700}
+  /* Диагностика — только при ?debug=1, обычным посетителям не видна */
+  .debug-box{display:none;margin-top:16px;border:1px dashed rgba(224,181,73,.45);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text-soft)}
+  .debug-box.on{display:block}
+  .dbg-title{font-weight:700;letter-spacing:.6px;text-transform:uppercase;font-size:10.5px;color:var(--gold);margin-bottom:8px}
+  .dbg-row{display:flex;justify-content:space-between;gap:12px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06);word-break:break-word}
+  .dbg-row b{color:var(--text);font-weight:600;text-align:right;max-width:62%}
   .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(26,20,10,.3);border-top-color:#1A140A;border-radius:50%;animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -298,7 +304,10 @@
         <input type="text" id="f-tg" placeholder="@username" autocomplete="off">
         <!-- Приманка для ботов: поле скрыто от людей, автозаполнялки его заполняют.
              Если значение пришло — прокси молча принимает заявку, но никуда не шлёт. -->
-        <input type="text" id="f-hp" name="f-hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+        <input type="text" id="f-hp" name="f-hp" tabindex="-1" autocomplete="off" autocorrect="off"
+               autocapitalize="off" spellcheck="false" aria-hidden="true"
+               data-lpignore="true" data-1p-ignore data-form-type="other"
+               style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
         <div class="err" id="f-err">Укажите телефон или ник в Telegram — иначе я не смогу отправить подборку.</div>
         <label class="check-row"><input type="checkbox" id="f-pdf" checked> Подарок: PDF «5 ошибок при покупке новостройки»</label>
         <div class="consent-box">
@@ -328,6 +337,7 @@
       <a class="link-btn gold" id="pdf-btn" href="#" target="_blank" style="display:none">Скачать PDF «5 ошибок при покупке»</a>
       <a class="link-btn" id="tg-btn" href="#" target="_blank" style="display:none">Telegram-канал Kvartorio</a>
       <div class="fallback" id="fallback"></div>
+      <div class="debug-box" id="debug-box"></div>
     </div>
   </main>
 
@@ -396,6 +406,12 @@ const LETTERS = ["А","Б","В","Г","Д","Е","Ж","З"];
 /* t0 — момент старта квиза. Уходит на прокси как elapsed: если заявка пришла
    быстрее, чем человек физически проходит 6 вопросов, это бот. */
 const state = { answers:{}, screen:"intro", utm:{}, t0:0 };
+
+/* Диагностический режим. Открыть страницу с ?debug=1 — на экране «Заявка принята»
+   появится панель: что именно ответил прокси, за сколько секунд, с какими полями
+   ушёл запрос. Нужен, чтобы с телефона можно было увидеть причину сбоя, а не гадать.
+   В обычном режиме не влияет ни на что. */
+const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
 (function(){
   const p = new URLSearchParams(location.search);
   ["utm_source","utm_medium","utm_campaign","utm_content","ref"].forEach(k=>{
@@ -560,7 +576,7 @@ function leadText(c){
 
 /* Заявка для прокси: структура, а не готовый текст. */
 function leadPayload(c){
-  return {
+  const p = {
     name: c.name,
     phone: c.phone,
     tg: c.tg,
@@ -571,39 +587,90 @@ function leadPayload(c){
     pdf: c.pdf,
     consent: true,
     utm: Object.keys(state.utm).map(k=>k+"="+state.utm[k]).join(", "),
-    elapsed: state.t0 ? Date.now() - state.t0 : 0,
     hp: (document.getElementById("f-hp") || {}).value || ""
   };
+  /* elapsed отправляем только если время старта известно. Ноль прокси считает
+     признаком бота, поэтому лучше не отправлять поле вовсе, чем отправить ноль. */
+  if(state.t0) p.elapsed = Date.now() - state.t0;
+  if(DEBUG) p.dbg = true;
+  return p;
 }
 
 /* Отправка заявки через прокси на Cloudflare Workers.
    Токен бота живёт в секретах прокси и в браузер не попадает.
-   Прокси ходит в Telegram по нестабильному из РФ адресу, поэтому — три попытки
-   по 8 секунд: без таймаута зависший запрос держал бы клиента на «Отправляю…»
-   до таймаута браузера. Успех показываем только при честном ok от прокси. */
+
+   Попытка ОДНА, но с длинным таймаутом (28 с). Так сделано сознательно:
+   прокси сам делает три попытки достучаться до Telegram (до ~22 с), поэтому
+   короткий таймаут клиента обрывал запрос раньше, чем прокси заканчивал работу, —
+   получались и ложные «не отправилось», и дубли заявок. Теперь клиент ждёт
+   столько же, сколько работает прокси, и не дублирует отправку.
+
+   Возвращаем не true/false, а подробный результат: на телефоне по нему видно,
+   что именно отвалилось — сеть, прокси или Telegram. */
 async function sendLead(payload){
-  if(!CONFIG.WORKER_URL) return false;
-  for(let attempt = 1; attempt <= 3; attempt++){
-    try{
-      const ctl = new AbortController();
-      const timer = setTimeout(()=>ctl.abort(), 8000);
-      const r = await fetch(CONFIG.WORKER_URL, {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify(payload),
-        signal: ctl.signal
-      });
-      clearTimeout(timer);
-      if(r.ok){
-        const data = await r.json().catch(()=>null);
-        if(data && data.ok) return true;
-      }
-      console.warn("lead: попытка " + attempt + " — HTTP " + r.status);
-    }catch(e){
-      console.warn("lead: попытка " + attempt + " не прошла", e);
-    }
-    if(attempt < 3) await new Promise(res => setTimeout(res, 1200));
+  const res = { ok:false, status:0, body:"", ms:0, err:"" };
+  if(!CONFIG.WORKER_URL){ res.err = "WORKER_URL пуст"; return res; }
+
+  const t0 = Date.now();
+  const ctl = new AbortController();
+  const timer = setTimeout(()=>ctl.abort(), 28000);
+  try{
+    const r = await fetch(CONFIG.WORKER_URL, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(payload),
+      signal: ctl.signal
+    });
+    clearTimeout(timer);
+    res.status = r.status;
+    res.body = (await r.text()).slice(0, 400);
+    try{ res.ok = !!(JSON.parse(res.body) || {}).ok; }catch(e){}
+  }catch(e){
+    clearTimeout(timer);
+    res.err = (e && e.name === "AbortError")
+      ? "таймаут 28 с — прокси не ответил"
+      : ((e && e.message) || String(e));
   }
-  return false;
+  res.ms = Date.now() - t0;
+  if(!res.ok) console.warn("lead: не ушла —", res.status, res.err, res.body);
+  return res;
+}
+
+/* Проверка, доходит ли телефон до прокси вообще. GET прокси отвечает 405 —
+   значит, связь есть и это именно наш воркер. Нужна только в режиме ?debug=1. */
+async function probeWorker(){
+  const t0 = Date.now();
+  try{
+    const r = await fetch(CONFIG.WORKER_URL, { method:"GET" });
+    return "есть, HTTP " + r.status + " за " + (Date.now()-t0) + " мс";
+  }catch(e){
+    return "НЕТ СВЯЗИ — " + ((e && e.message) || e);
+  }
+}
+
+/* Панель диагностики. Видна только при ?debug=1. */
+async function showDebug(res, payload){
+  if(!DEBUG) return;
+  const box = document.getElementById("debug-box");
+  if(!box) return;
+  const conn = navigator.connection || {};
+  const lines = [
+    ["Адрес прокси", CONFIG.WORKER_URL || "— пусто —"],
+    ["Связь с прокси", await probeWorker()],
+    ["HTTP-ответ", res.status ? String(res.status) : "нет ответа"],
+    ["Время", res.ms + " мс"],
+    ["Тело ответа", res.body || "— пусто —"],
+    ["Ошибка сети", res.err || "—"],
+    ["Интернет", navigator.onLine ? "есть" : "нет"],
+    ["Тип сети", conn.effectiveType || "неизвестно"],
+    ["Отправлено hp", JSON.stringify(payload.hp)],
+    ["Отправлено elapsed", payload.elapsed === undefined ? "— не отправлялось" : payload.elapsed + " мс"],
+    ["Браузер", navigator.userAgent.slice(0, 90)]
+  ];
+  box.innerHTML = '<div class="dbg-title">Диагностика (debug=1)</div>' +
+    lines.map(l=>'<div class="dbg-row"><span>' + l[0] + '</span><b>' +
+      String(l[1]).replace(/[<>&]/g, c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) +
+      '</b></div>').join('');
+  box.classList.add("on");
 }
 
 async function submitLead(){
@@ -611,8 +678,15 @@ async function submitLead(){
   const btn = document.getElementById("f-submit");
   btn.innerHTML = '<span class="spinner"></span>Отправляю…'; btn.disabled = true;
 
+  /* Если сеть медленная, человек не должен думать, что кнопка зависла. */
+  const slow = setTimeout(function(){
+    if(btn.disabled) btn.innerHTML = '<span class="spinner"></span>Ещё отправляю, сеть медленная…';
+  }, 7000);
+
   const msg = leadText(c);
-  const ok = await sendLead(leadPayload(c));
+  const payload = leadPayload(c);
+  const res = await sendLead(payload);
+  clearTimeout(slow);
 
   state.screen = "done";
   setProgress(QUESTIONS.length + 1);
@@ -621,17 +695,19 @@ async function submitLead(){
   if(CONFIG.PDF_URL){ pdfBtn.href = CONFIG.PDF_URL; pdfBtn.style.display = "flex"; }
   if(CONFIG.TG_CHANNEL){ tgBtn.href = CONFIG.TG_CHANNEL; tgBtn.style.display = "flex"; }
 
-  if(!ok){
+  if(!res.ok){
     /* Страховка от потери заявки: кнопка «отправить в Telegram» с готовым текстом.
-       Если прокси не достучался до Telegram (таймаут, сбой, лимит) —
+       Если прокси не достучался до Telegram (таймаут, сбой, лимит, сеть) —
        заявка всё равно дойдёт до Руслана, клиенту остаётся одно нажатие. */
     const fb = document.getElementById("fallback");
     fb.classList.add("on");
     const deep = "https://t.me/" + CONFIG.TG_BOT_USERNAME + "?text=" + encodeURIComponent(msg);
     fb.innerHTML = "<b>Остался один шаг.</b> Нажмите кнопку ниже — заявка уйдёт мне в Telegram " +
       "одним готовым сообщением. Печатать ничего не нужно.<br><br>" +
-      '<a class="link-btn gold" style="margin-top:0" href="' + deep + '" target="_blank" rel="noopener">Отправить заявку в Telegram</a>';
+      '<a class="link-btn gold" style="margin-top:0" href="' + deep + '" target="_blank" rel="noopener">Отправить заявку в Telegram</a>' +
+      (DEBUG ? "<br><br>Причина сбоя: " + (res.err || ("HTTP " + res.status + " " + res.body)) : "");
   }
+  await showDebug(res, payload);
 }
 
 /* ── клавиатура: 1..9 — выбрать ответ, Backspace — назад ── */
