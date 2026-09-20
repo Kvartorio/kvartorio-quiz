@@ -887,18 +887,31 @@ document.getElementById("f-phone").addEventListener("input", function(){ maskPho
    это всё равно «доступен»: важен факт связи, а не страница. */
 const CHECK = new URLSearchParams(location.search).get("check") === "1";
 
+/* Что проверяем. ПЕРВАЯ строка — контроль: если недоступен даже Google, значит
+   интернета в этот момент нет, и весь красный список ничего не значит.
+   Дальше по строке на площадку, где можно бесплатно держать прокси.
+   Проверяем РАНТАЙМ-домены, а не сайты-витрины: у одной площадки они разные.
+   Отметки «проверено 20.09» — результат замеров с телефона Руслана. */
 const CHECK_URLS = [
-  "https://www.google.com/generate_204",                   // контроль: есть ли вообще интернет
-  "https://api.telegram.org/",                             // сам Telegram API
-  "https://kvartorio-lead-proxy.kvartorio.workers.dev/",   // наш прокси на Cloudflare — контроль, должен быть НЕДОСТУПЕН
-  "https://www.cloudflare.com/",                           // Cloudflare на своём домене: если он доступен, а workers.dev нет — блок по имени, а не по адресам
-  "https://securelay.vercel.app/",                         // Vercel, чужой проект: проверяем сам рантайм
-  "https://vercel.com/",                                   // Vercel, сайт
-  "https://dash.deno.com/",                                // Deno Deploy — панель
-  "https://fresh.deno.dev/",                               // Deno Deploy — живое приложение на *.deno.dev
-  "https://app.netlify.com/",                              // Netlify
-  "https://script.google.com/"                             // Google Apps Script
+  "https://www.google.com/generate_204",                 // контроль: есть ли вообще интернет
+  "https://functions.yandexcloud.net/",                  // Яндекс Облако — ДОСТУПЕН с телефона (176 мс)
+  "https://securelay.vercel.app/",                       // Vercel — ДОСТУПЕН с телефона (643 мс)
+  "https://vercel.app/",                                 // Vercel, тот же рантайм
+  "https://www.cloudflare.com/",                         // Cloudflare на своём домене: отделяет блок по имени от блока по адресам
+  "https://workers.dev/",                                // Cloudflare Workers — НЕДОСТУПЕН с телефона
+  "https://pages.dev/",                                  // Cloudflare Pages — та же семья адресов
+  "https://www.netlify.com/",                            // Netlify — сайт и CDN
+  "https://app.netlify.com/",                            // Netlify — панель
+  "https://fresh.deno.dev/",                             // Deno Deploy — РАНТАЙМ-домен *.deno.dev (это не то же, что deno.com!)
+  "https://dash.deno.com/",                              // Deno Deploy — панель
+  "https://supabase.com/",                               // Supabase
+  "https://app.koyeb.com/",                              // Koyeb
+  "https://api.github.com/",                             // GitHub API — запасной вариант через Actions
+  "https://api.telegram.org/"                            // сам Telegram API — НЕДОСТУПЕН с телефона
 ];
+
+/* Номер строки-контроля в списке выше. По нему понимаем, был ли вообще интернет. */
+const CHECK_CONTROL_INDEX = 0;
 
 async function checkOne(url, timeoutMs){
   const t0 = Date.now();
@@ -933,33 +946,55 @@ async function runCheck(){
       '<div class="sub">Откройте эту страницу с телефона, без обходов и VPN, ' +
         'и пришлите скриншот — по нему будет видно, какой адрес годится для заявок.</div>' +
       '<div id="check-out" class="debug-box on" style="margin-top:18px">Проверяю…</div>' +
+      '<button class="btn" id="check-again" type="button" style="margin-top:16px">Проверить ещё раз</button>' +
     '</div>';
   document.getElementById("main").appendChild(s);
 
+  const out = document.getElementById("check-out");
   const conn = navigator.connection || {};
-  const results = await Promise.all(CHECK_URLS.map(u => checkOne(u, 4000)));
 
   const row = (name, value) =>
     '<div class="dbg-row"><span>' + name + '</span><b>' + value + '</b></div>';
 
-  const head = [
-    row("Тип сети", conn.effectiveType || "—"),
-    row("Интернет", navigator.onLine ? "есть" : "нет"),
-    row("Экономия трафика", conn.saveData ? "включена" : "выключена")
-  ].join("");
+  async function run(){
+    out.innerHTML = "Проверяю…";
+    const results = await Promise.all(CHECK_URLS.map(u => checkOne(u, 4000)));
 
-  const list = CHECK_URLS.map((u, i) => {
-    const r = results[i];
-    const verdict = r.ok
-      ? '<b style="color:#7FD18A">доступен за ' + r.ms + ' мс</b>'
-      : '<b style="color:#E08A73">' + r.err + '</b>';
-    return '<div class="dbg-row"><span>' + u.replace(/^https?:\/\//, "").replace(/\/$/, "") +
-           '</span>' + verdict + '</div>';
-  }).join("");
+    const head = [
+      row("Тип сети", conn.effectiveType || "—"),
+      row("Интернет", navigator.onLine ? "есть" : "нет"),
+      row("Экономия трафика", conn.saveData ? "включена" : "выключена")
+    ].join("");
 
-  document.getElementById("check-out").innerHTML =
-    '<div class="dbg-title">Сеть</div>' + head +
-    '<div class="dbg-title" style="margin-top:14px">Адреса</div>' + list;
+    const list = CHECK_URLS.map((u, i) => {
+      const r = results[i];
+      const verdict = r.ok
+        ? '<b style="color:#7FD18A">доступен за ' + r.ms + ' мс</b>'
+        : '<b style="color:#E08A73">' + r.err + '</b>';
+      return '<div class="dbg-row"><span>' + u.replace(/^https?:\/\//, "").replace(/\/$/, "") +
+             '</span>' + verdict + '</div>';
+    }).join("");
+
+    /* Если не открылся даже контроль (Google) — интернета в этот момент нет.
+       Без этой подсказки весь красный список легко принять за блокировку, хотя
+       сеть просто не работала. Ровно так и вышло 20.09.2026: на мобильном
+       интернете покраснело всё, включая Google, — а это значит «нет связи»,
+       а не «всё заблокировано». */
+    const noNet = !(results[CHECK_CONTROL_INDEX] && results[CHECK_CONTROL_INDEX].ok);
+    const hint = noNet
+      ? '<div class="dbg-row" style="display:block;margin-top:12px">' +
+        '<b style="color:#E08A73">Похоже, интернета сейчас нет: не открылся даже Google. ' +
+        'Включите передачу данных, подождите пару секунд и нажмите «Проверить ещё раз». ' +
+        'Пока контроль красный, этот список ничего не значит.</b></div>'
+      : '';
+
+    out.innerHTML =
+      '<div class="dbg-title">Сеть</div>' + head +
+      '<div class="dbg-title" style="margin-top:14px">Адреса</div>' + list + hint;
+  }
+
+  document.getElementById("check-again").addEventListener("click", run);
+  await run();
 }
 
 /* ── ТОЧКА ВХОДА ──
