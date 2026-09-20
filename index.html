@@ -7,15 +7,16 @@
 <meta name="description" content="Ответьте на 6 коротких вопросов — и получите персональную подборку квартир в новостройках Тюмени от риелтора Руслана Халимуллина. Бесплатно, комиссия 0 ₽.">
 <meta name="theme-color" content="#0A0806">
 <link rel="icon" href="logo_head.png">
-<!-- Превью ссылки в Telegram/VK/WhatsApp. ВАЖНО: og:image требует АБСОЛЮТНЫЙ адрес —
-     после публикации подставьте реальный домен вместо https://ВАШ-АДРЕС/ -->
+<!-- Превью ссылки в Telegram/VK/WhatsApp.
+     Абсолютный адрес подставлен автоматически скриптом _tools/build_publish.py -->
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://kvartorio.github.io/kvartorio-quiz/">
+<meta property="og:image:width" content="1080">
+<meta property="og:image:height" content="1080">
 <meta property="og:title" content="Подборка квартир в новостройках Тюмени за 2 минуты">
 <meta property="og:description" content="6 вопросов → персональная подборка ЖК с ценами, сроками и честными минусами. Бесплатно, комиссия 0 ₽.">
-<meta property="og:image" content="https://ВАШ-АДРЕС/logo.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Prata&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta property="og:image" content="https://kvartorio.github.io/kvartorio-quiz/logo.png">
+<link rel="stylesheet" href="fonts/fonts.css">
 <style>
   :root{
     --bg:#0A0806;
@@ -371,7 +372,7 @@ const CONFIG = {
     "https://kvartorio-lead-proxy.kvartorio.workers.dev"
   ],
   TG_BOT_USERNAME: "kvartorio_bot",
-  PDF_URL: "",
+  PDF_URL: "https://kvartorio.github.io/kvartorio-quiz/5-oshibok-pri-pokupke-novostroyki.pdf",
   TG_CHANNEL: "",
   TG_DIRECT: ""
 };
@@ -871,11 +872,12 @@ const CHECK = new URLSearchParams(location.search).get("check") === "1";
 
 const CHECK_URLS = [
   "https://api.telegram.org/",                            // виден ли вообще Telegram API
-  "https://functions.yandexcloud.net/",                   // плечо внутри РФ
+  "https://functions.yandexcloud.net/",                   // плечо внутри РФ (Яндекс Облако)
   "https://kvartorio-lead-proxy.kvartorio.workers.dev/",  // контроль: известно, что блокируется
-  "https://vercel.com/",                                  // площадки, где не нужна карта
-  "https://script.google.com/",
-  "https://deno.com/",
+  "https://securelay.vercel.app/",                        // Vercel — площадка без карты
+  "https://vercel.com/",                                  // сам Vercel, на случай другого диапазона
+  "https://script.google.com/",                           // Google Apps Script — тоже без карты
+  "https://deno.com/",                                    // Deno Deploy — тоже без карты
   "https://www.google.com/generate_204"                    // контроль: обычный интернет
 ];
 
