@@ -360,15 +360,21 @@
 const CONFIG = {
   /* Адреса прокси, куда уходит заявка. Клиент проверяет все сразу при открытии
      страницы и на отправке берёт самый быстрый живой. Порядок в списке ни на что
-     не влияет.
+     не влияет — можно смело держать здесь и рабочий адрес, и запасные.
 
-     Почему их два. Диапазоны Cloudflare в России режут через DPI: с мобильного
-     интернета и домашнего вай-фая запрос до `*.workers.dev` не отвечает вообще —
-     соединение висит до таймаута. Поэтому в России нужен промежуточный узел
-     внутри страны, а уже он пересылает заявку в Cloudflare, оттуда — в Telegram.
-     Схема целиком описана в worker/ЯНДЕКС_ОБЛАКО.md. Пустые строки пропускаются. */
+     Как это устроено сейчас (20.09.2026). Основной путь — Vercel: одно плечо,
+     телефон → <проект>.vercel.app/api/submit → api.telegram.org. Проверено с
+     телефона Руслана: Vercel из его сети виден. Карта и платёжный аккаунт не
+     нужны. Инструкция — worker/ВЕРСЕЛ.md.
+
+     Почему в списке остаётся Cloudflare. Диапазоны `*.workers.dev` в России
+     режут через DPI: с мобильного интернета запрос не отвечает вообще, соединение
+     висит до таймаута. Адрес оставлен как запасной: если Vercel когда-нибудь
+     перестанет отвечать, клиент возьмёт Cloudflare, если тот вдруг доступен.
+     На адреса, которые ещё не развёрнуты, клиент не поведётся: проверка считает
+     живым только ответ 405/204/200 (PROBE_OK_STATUS), а не любой подряд. */
   WORKER_URLS: [
-    "",   // адрес функции в Яндекс Облаке — см. worker/ЯНДЕКС_ОБЛАКО.md
+    "https://kvartorio-lead-proxy.vercel.app/api/submit",
     "https://kvartorio-lead-proxy.kvartorio.workers.dev"
   ],
   TG_BOT_USERNAME: "kvartorio_bot",
@@ -705,10 +711,19 @@ async function sendLead(payload){
 let relayProbe = null;
 const PROBE_TTL_MS = 10 * 60 * 1000;
 
-/* Проверка, дотягивается ли эта сеть до прокси. GET прокси отвечает 405 —
-   значит, связь есть и это именно наш прокси, а не заглушка провайдера.
+/* Проверка, дотягивается ли эта сеть до прокси. Наш прокси на GET отвечает 405
+   (method_not_allowed), на OPTIONS — 204. Это и есть признак «это наш прокси, а
+   не заглушка провайдера и не чужая страница».
    Таймаут обязателен: при DPI-блокировке соединение не отвергается, а просто
-   висит, и без таймаута проверка никогда не закончится. */
+   висит, и без таймаута проверка никогда не закончится.
+
+   Почему нельзя считать живым любой ответ. Если адрес ещё не развёрнут или
+   написан с ошибкой, сервер отвечает 404 — и это быстрый ответ. Без проверки
+   статуса такой адрес выиграл бы гонку «самый быстрый живой» и заявка ушла бы
+   в никуда. Отсюда белый список. Плюс страховка от блокировки: заглушка
+   провайдера отдаёт 200 с чужой страницей, и её тоже не надо принимать за прокси. */
+const PROBE_OK_STATUS = [200, 204, 405];
+
 async function probeOne(url, timeoutMs){
   const t0 = Date.now();
   const ctl = new AbortController();
@@ -716,7 +731,9 @@ async function probeOne(url, timeoutMs){
   try{
     const r = await fetch(url, { method:"GET", signal: ctl.signal });
     clearTimeout(timer);
-    return { ok:true, status:r.status, ms: Date.now()-t0, err:"" };
+    const good = PROBE_OK_STATUS.indexOf(r.status) !== -1;
+    return { ok: good, status: r.status, ms: Date.now()-t0,
+             err: good ? "" : "ответ " + r.status + " — это не наш прокси" };
   }catch(e){
     clearTimeout(timer);
     return { ok:false, status:0, ms: Date.now()-t0,
@@ -871,14 +888,16 @@ document.getElementById("f-phone").addEventListener("input", function(){ maskPho
 const CHECK = new URLSearchParams(location.search).get("check") === "1";
 
 const CHECK_URLS = [
-  "https://api.telegram.org/",                            // виден ли вообще Telegram API
-  "https://functions.yandexcloud.net/",                   // плечо внутри РФ (Яндекс Облако)
-  "https://kvartorio-lead-proxy.kvartorio.workers.dev/",  // контроль: известно, что блокируется
-  "https://securelay.vercel.app/",                        // Vercel — площадка без карты
-  "https://vercel.com/",                                  // сам Vercel, на случай другого диапазона
-  "https://script.google.com/",                           // Google Apps Script — тоже без карты
-  "https://deno.com/",                                    // Deno Deploy — тоже без карты
-  "https://www.google.com/generate_204"                    // контроль: обычный интернет
+  "https://www.google.com/generate_204",                   // контроль: есть ли вообще интернет
+  "https://api.telegram.org/",                             // сам Telegram API
+  "https://kvartorio-lead-proxy.kvartorio.workers.dev/",   // наш прокси на Cloudflare — контроль, должен быть НЕДОСТУПЕН
+  "https://www.cloudflare.com/",                           // Cloudflare на своём домене: если он доступен, а workers.dev нет — блок по имени, а не по адресам
+  "https://securelay.vercel.app/",                         // Vercel, чужой проект: проверяем сам рантайм
+  "https://vercel.com/",                                   // Vercel, сайт
+  "https://dash.deno.com/",                                // Deno Deploy — панель
+  "https://fresh.deno.dev/",                               // Deno Deploy — живое приложение на *.deno.dev
+  "https://app.netlify.com/",                              // Netlify
+  "https://script.google.com/"                             // Google Apps Script
 ];
 
 async function checkOne(url, timeoutMs){
