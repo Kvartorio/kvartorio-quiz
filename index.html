@@ -7,16 +7,15 @@
 <meta name="description" content="Ответьте на 6 коротких вопросов — и получите персональную подборку квартир в новостройках Тюмени от риелтора Руслана Халимуллина. Бесплатно, комиссия 0 ₽.">
 <meta name="theme-color" content="#0A0806">
 <link rel="icon" href="logo_head.png">
-<!-- Превью ссылки в Telegram/VK/WhatsApp.
-     Абсолютный адрес подставлен автоматически скриптом _tools/build_publish.py -->
+<!-- Превью ссылки в Telegram/VK/WhatsApp. ВАЖНО: og:image требует АБСОЛЮТНЫЙ адрес —
+     после публикации подставьте реальный домен вместо https://ВАШ-АДРЕС/ -->
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://kvartorio.github.io/kvartorio-quiz/">
-<meta property="og:image:width" content="1080">
-<meta property="og:image:height" content="1080">
 <meta property="og:title" content="Подборка квартир в новостройках Тюмени за 2 минуты">
 <meta property="og:description" content="6 вопросов → персональная подборка ЖК с ценами, сроками и честными минусами. Бесплатно, комиссия 0 ₽.">
-<meta property="og:image" content="https://kvartorio.github.io/kvartorio-quiz/logo.png">
-<link rel="stylesheet" href="fonts/fonts.css">
+<meta property="og:image" content="https://ВАШ-АДРЕС/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prata&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#0A0806;
@@ -219,9 +218,12 @@
   }
   .link-btn:hover{border-color:var(--gold2);background:var(--card2)}
   .link-btn.gold{border-color:var(--gold);background:var(--gold-soft);color:var(--gold)}
-  .fallback{display:none;margin-top:16px;border:1px solid rgba(224,108,90,.4);background:rgba(224,108,90,.07);border-radius:15px;padding:14px 16px;font-size:14px;color:var(--text-soft)}
+  .fallback{display:none;margin-top:16px;border:1px solid rgba(224,181,73,.4);background:rgba(224,181,73,.06);border-radius:15px;padding:14px 16px;font-size:14px;color:var(--text-soft)}
   .fallback.on{display:block}
   .fallback a{color:var(--gold);font-weight:700}
+  .fb-copy{margin-top:10px}
+  .fb-copy-btn{background:none;border:0;padding:0;font:inherit;font-size:13px;color:var(--muted);text-decoration:underline;cursor:pointer}
+  .fb-copy-btn:active{color:var(--gold)}
   /* Диагностика — только при ?debug=1, обычным посетителям не видна */
   .debug-box{display:none;margin-top:16px;border:1px dashed rgba(224,181,73,.45);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text-soft)}
   .debug-box.on{display:block}
@@ -327,8 +329,8 @@
       <div class="done-mark">
         <svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5l5 5L19.5 7" stroke="#E0B549" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
-      <h1>Заявка принята</h1>
-      <div class="sub" style="margin-bottom:0">Что происходит дальше:</div>
+      <h1 id="done-title">Заявка принята</h1>
+      <div class="sub" style="margin-bottom:0" id="done-sub">Что происходит дальше:</div>
       <div class="steps">
         <div><span class="n">1</span><span><b>Я вручную</b> отбираю квартиры под ваши критерии из актуальной базы застройщиков.</span></div>
         <div><span class="n">2</span><span><b>В течение дня</b> присылаю подборку с ценами, сроками сдачи и честными минусами каждого варианта.</span></div>
@@ -349,16 +351,27 @@
 
 <script>
 /* ═══════════ КОНФИГ ═══════════
- * WORKER_URL — адрес прокси на Cloudflare Workers, который отправляет заявки
- *   в Telegram. Токен бота лежит в секретах прокси и в браузер не попадает:
- *   https://kvartorio-lead-proxy.<аккаунт>.workers.dev
- *   Пока поле пустое, заявка уйдёт только кнопкой-страховкой в Telegram.
+ * WORKER_URLS — адреса прокси, которые отправляют заявки в Telegram. Токен бота
+ *   лежит в секретах прокси и в браузер не попадает. Если список пуст, заявка
+ *   уйдёт только кнопкой-страховкой в Telegram.
  * PDF_URL / TG_CHANNEL / TG_DIRECT — впишите, когда готовы.
  * ═══════════════════════════════ */
 const CONFIG = {
-  WORKER_URL: "https://kvartorio-lead-proxy.kvartorio.workers.dev",
+  /* Адреса прокси, куда уходит заявка. Клиент проверяет все сразу при открытии
+     страницы и на отправке берёт самый быстрый живой. Порядок в списке ни на что
+     не влияет.
+
+     Почему их два. Диапазоны Cloudflare в России режут через DPI: с мобильного
+     интернета и домашнего вай-фая запрос до `*.workers.dev` не отвечает вообще —
+     соединение висит до таймаута. Поэтому в России нужен промежуточный узел
+     внутри страны, а уже он пересылает заявку в Cloudflare, оттуда — в Telegram.
+     Схема целиком описана в worker/ЯНДЕКС_ОБЛАКО.md. Пустые строки пропускаются. */
+  WORKER_URLS: [
+    "",   // адрес функции в Яндекс Облаке — см. worker/ЯНДЕКС_ОБЛАКО.md
+    "https://kvartorio-lead-proxy.kvartorio.workers.dev"
+  ],
   TG_BOT_USERNAME: "kvartorio_bot",
-  PDF_URL: "https://kvartorio.github.io/kvartorio-quiz/5-oshibok-pri-pokupke-novostroyki.pdf",
+  PDF_URL: "",
   TG_CHANNEL: "",
   TG_DIRECT: ""
 };
@@ -596,26 +609,77 @@ function leadPayload(c){
   return p;
 }
 
-/* Отправка заявки через прокси на Cloudflare Workers.
-   Токен бота живёт в секретах прокси и в браузер не попадает.
+/* Отправка заявки через прокси. Токен бота живёт в секретах прокси и в браузер
+   не попадает.
 
-   Попытка ОДНА, но с длинным таймаутом (28 с). Так сделано сознательно:
-   прокси сам делает три попытки достучаться до Telegram (до ~22 с), поэтому
-   короткий таймаут клиента обрывал запрос раньше, чем прокси заканчивал работу, —
-   получались и ложные «не отправилось», и дубли заявок. Теперь клиент ждёт
-   столько же, сколько работает прокси, и не дублирует отправку.
+   ПРО ПОРЯДОК ПРОВЕРОК (20.09.2026). Доступность прокси проверяется ЗАРАНЕЕ,
+   при открытии страницы, в фоне. К моменту нажатия «Отправить» ответ уже есть,
+   поэтому человек не ждёт ничего лишнего. Причина: в России недоступны и
+   Cloudflare (диапазоны режут по DPI), и сам api.telegram.org — то есть обычный
+   путь «браузер → прокси → Telegram» с российских сетей не работает вообще.
+   Проверка при загрузке позволяет не заставлять человека ждать впустую.
+
+   Таймаут самой отправки — 20 с, и попытка одна: прокси сам делает попытки
+   достучаться до Telegram (до ~13 с), поэтому короткий таймаут клиента обрывал
+   запрос раньше, чем прокси заканчивал работу, — получались и ложные
+   «не отправилось», и дубли заявок. 20 с больше 13 с с запасом, но не настолько,
+   чтобы человек ждал впустую: если прокси жив, ответ приходит за секунду.
 
    Возвращаем не true/false, а подробный результат: на телефоне по нему видно,
    что именно отвалилось — сеть, прокси или Telegram. */
 async function sendLead(payload){
-  const res = { ok:false, status:0, body:"", ms:0, err:"" };
-  if(!CONFIG.WORKER_URL){ res.err = "WORKER_URL пуст"; return res; }
+  const res = { ok:false, status:0, body:"", ms:0, err:"", url:"", urls:[], probeResults:[] };
 
+  const urls = (CONFIG.WORKER_URLS || []).filter(u => /^https?:\/\//.test(u));
+  res.urls = urls;
+  if(!urls.length){ res.err = "не задан ни один адрес прокси"; return res; }
+
+  /* Берём результат фоновой проверки, если он есть и не протух. Иначе проверяем
+     сейчас: все адреса ОДНОВРЕМЕННО, ждём первый ответивший. Последовательно
+     нельзя — в России Cloudflare не отвечает вообще, и человек ждал бы впустую
+     все 4 секунды его таймаута. Без Promise.any: на телефонах постарше его может
+     не быть, а падение здесь сломало бы всю отправку. */
+  /* Кэш годится, только если список адресов тот же: если конфиг поменяли,
+     проверять надо заново, иначе результат относился бы к другим адресам. */
+  const cached = (relayProbe && Date.now() - relayProbe.at < PROBE_TTL_MS
+                  && relayProbe.urls.join("|") === urls.join("|")) ? relayProbe : null;
+  let probeResults, probeUrls;
+  if(cached){
+    probeUrls = cached.urls; probeResults = cached.results;
+  }else{
+    probeUrls = urls;
+    const probes = urls.map(u => probeOne(u, 4000));
+    probeResults = probes.map(() => null);
+    await new Promise(resolve => {
+      let left = urls.length, settled = false;
+      const finish = () => { if(!settled){ settled = true; resolve(); } };
+      probes.forEach((p, i) => {
+        p.then(r => {
+          probeResults[i] = r;
+          if(!settled && r.ok) finish();
+          else if(--left === 0) finish();
+        });
+      });
+    });
+    relayProbe = { at: Date.now(), urls: urls, results: probeResults };
+  }
+  res.urls = probeUrls;
+  res.probeResults = probeResults;
+
+  /* Берём САМЫЙ БЫСТРЫЙ живой прокси, а не первый по списку: в России живым
+     окажется только узел внутри страны, за границей — Cloudflare, и гадать,
+     какой из них сейчас ближе, не нужно. */
+  let idx = -1, best = Infinity;
+  probeResults.forEach((r, i) => { if(r && r.ok && r.ms < best){ best = r.ms; idx = i; } });
+  if(idx < 0){ res.err = "ни один прокси не доступен из этой сети"; return res; }
+  const target = probeUrls[idx];
+
+  res.url = target;
   const t0 = Date.now();
   const ctl = new AbortController();
-  const timer = setTimeout(()=>ctl.abort(), 28000);
+  const timer = setTimeout(()=>ctl.abort(), 20000);
   try{
-    const r = await fetch(CONFIG.WORKER_URL, {
+    const r = await fetch(target, {
       method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify(payload),
       signal: ctl.signal
@@ -627,7 +691,7 @@ async function sendLead(payload){
   }catch(e){
     clearTimeout(timer);
     res.err = (e && e.name === "AbortError")
-      ? "таймаут 28 с — прокси не ответил"
+      ? "таймаут 20 с — прокси не ответил"
       : ((e && e.message) || String(e));
   }
   res.ms = Date.now() - t0;
@@ -635,16 +699,38 @@ async function sendLead(payload){
   return res;
 }
 
-/* Проверка, доходит ли телефон до прокси вообще. GET прокси отвечает 405 —
-   значит, связь есть и это именно наш воркер. Нужна только в режиме ?debug=1. */
-async function probeWorker(){
+/* Результат последней проверки доступности прокси. Живёт до перезагрузки
+   страницы; PROBE_TTL_MS — сколько ему можно доверять. */
+let relayProbe = null;
+const PROBE_TTL_MS = 10 * 60 * 1000;
+
+/* Проверка, дотягивается ли эта сеть до прокси. GET прокси отвечает 405 —
+   значит, связь есть и это именно наш прокси, а не заглушка провайдера.
+   Таймаут обязателен: при DPI-блокировке соединение не отвергается, а просто
+   висит, и без таймаута проверка никогда не закончится. */
+async function probeOne(url, timeoutMs){
   const t0 = Date.now();
+  const ctl = new AbortController();
+  const timer = setTimeout(()=>ctl.abort(), timeoutMs);
   try{
-    const r = await fetch(CONFIG.WORKER_URL, { method:"GET" });
-    return "есть, HTTP " + r.status + " за " + (Date.now()-t0) + " мс";
+    const r = await fetch(url, { method:"GET", signal: ctl.signal });
+    clearTimeout(timer);
+    return { ok:true, status:r.status, ms: Date.now()-t0, err:"" };
   }catch(e){
-    return "НЕТ СВЯЗИ — " + ((e && e.message) || e);
+    clearTimeout(timer);
+    return { ok:false, status:0, ms: Date.now()-t0,
+             err: (e && e.name === "AbortError") ? "таймаут " + (timeoutMs/1000) + " с" : ((e && e.message) || String(e)) };
   }
+}
+
+/* Фоновая проверка всех адресов сразу при открытии страницы. Нужна, чтобы
+   к моменту нажатия «Отправить» уже знать, работает ли прокси из этой сети:
+   человек проходит квиз две минуты, проверка давно готова. */
+function probeAllInBackground(){
+  const urls = (CONFIG.WORKER_URLS || []).filter(u => /^https?:\/\//.test(u));
+  if(!urls.length) return;
+  Promise.all(urls.map(u => probeOne(u, 4000).catch(() => null)))
+    .then(results => { relayProbe = { at: Date.now(), urls: urls, results: results }; });
 }
 
 /* Панель диагностики. Видна только при ?debug=1. */
@@ -652,12 +738,19 @@ async function showDebug(res, payload){
   if(!DEBUG) return;
   const box = document.getElementById("debug-box");
   if(!box) return;
+
+  const probeText = (res.urls || []).map((u, i) => {
+    const p = (res.probeResults || [])[i];
+    return u + (p ? (p.ok ? " — доступен за " + p.ms + " мс" : " — НЕДОСТУПЕН (" + p.err + ")")
+                  : " — нет данных");
+  }).join("\n");
+
   const conn = navigator.connection || {};
   const lines = [
-    ["Адрес прокси", CONFIG.WORKER_URL || "— пусто —"],
-    ["Связь с прокси", await probeWorker()],
+    ["Проверка связи", probeText || "— не проверялось —"],
+    ["Куда ушло", res.url || "— никуда —"],
     ["HTTP-ответ", res.status ? String(res.status) : "нет ответа"],
-    ["Время", res.ms + " мс"],
+    ["Время отправки", res.ms + " мс"],
     ["Тело ответа", res.body || "— пусто —"],
     ["Ошибка сети", res.err || "—"],
     ["Интернет", navigator.onLine ? "есть" : "нет"],
@@ -695,19 +788,56 @@ async function submitLead(){
   if(CONFIG.PDF_URL){ pdfBtn.href = CONFIG.PDF_URL; pdfBtn.style.display = "flex"; }
   if(CONFIG.TG_CHANNEL){ tgBtn.href = CONFIG.TG_CHANNEL; tgBtn.style.display = "flex"; }
 
+  /* Экран не должен врать: «Заявка принята» пишем только если прокси
+     подтвердил отправку. Иначе заголовок честно говорит, что шаг ещё не сделан. */
+  const title = document.getElementById("done-title");
+  const sub = document.getElementById("done-sub");
+
   if(!res.ok){
-    /* Страховка от потери заявки: кнопка «отправить в Telegram» с готовым текстом.
-       Если прокси не достучался до Telegram (таймаут, сбой, лимит, сеть) —
-       заявка всё равно дойдёт до Руслана, клиенту остаётся одно нажатие. */
+    if(title) title.textContent = "Остался последний шаг";
+    if(sub) sub.textContent = "Подтвердите заявку — это одно нажатие:";
+
+    /* Почему так. С российских сетей обычный путь «браузер → прокси → Telegram»
+       не работает вообще: диапазоны Cloudflare режут по DPI, а сам
+       api.telegram.org недоступен из РФ даже с серверов внутри страны.
+       Единственный канал, который проходит всегда, — открыть Telegram
+       и отправить готовое сообщение. Заявка не теряется. */
     const fb = document.getElementById("fallback");
     fb.classList.add("on");
     const deep = "https://t.me/" + CONFIG.TG_BOT_USERNAME + "?text=" + encodeURIComponent(msg);
-    fb.innerHTML = "<b>Остался один шаг.</b> Нажмите кнопку ниже — заявка уйдёт мне в Telegram " +
-      "одним готовым сообщением. Печатать ничего не нужно.<br><br>" +
-      '<a class="link-btn gold" style="margin-top:0" href="' + deep + '" target="_blank" rel="noopener">Отправить заявку в Telegram</a>' +
-      (DEBUG ? "<br><br>Причина сбоя: " + (res.err || ("HTTP " + res.status + " " + res.body)) : "");
+    fb.innerHTML =
+      "<b>Нажмите кнопку — откроется Telegram с уже готовым сообщением.</b> " +
+      "Останется нажать «Отправить». Печатать ничего не нужно.<br><br>" +
+      '<a class="link-btn gold" style="margin-top:0" href="' + deep + '" target="_blank" rel="noopener">Открыть Telegram и отправить</a>' +
+      '<div class="fb-copy"><button type="button" class="fb-copy-btn" id="fb-copy">Скопировать текст заявки</button></div>' +
+      (DEBUG ? "<br>Причина: " + (res.err || ("HTTP " + res.status + " " + res.body)) : "");
+
+    const cp = document.getElementById("fb-copy");
+    if(cp) cp.onclick = function(){
+      const done = function(){ cp.textContent = "Текст скопирован — вставьте его в любой мессенджер"; };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(msg).then(done, function(){ copyViaTextarea(msg); done(); });
+      }else{ copyViaTextarea(msg); done(); }
+    };
   }
   await showDebug(res, payload);
+}
+
+/* Запасной способ копирования: navigator.clipboard есть не везде и требует
+   защищённого контекста. Старый трюк с textarea работает на любом телефоне. */
+function copyViaTextarea(text){
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }catch(e){ /* копирование не удалось — человек отправит через Telegram */ }
 }
 
 /* ── клавиатура: 1..9 — выбрать ответ, Backspace — назад ── */
@@ -723,6 +853,100 @@ document.addEventListener("keydown", e=>{
 
 /* ── маска телефона ── */
 document.getElementById("f-phone").addEventListener("input", function(){ maskPhone(this); });
+
+/* ═══════════ РЕЖИМ ПРОВЕРКИ СВЯЗИ: ?check=1 ═══════════
+   Зачем. С рабочего компьютера, где включён обход DPI, всё выглядит рабочим, а с
+   телефона часть адресов молча висит. Изнутри это не увидеть — нужен взгляд со
+   стороны, то есть с телефона на обычной сети. Откройте адрес квиза с `?check=1`
+   БЕЗ обходов и VPN и пришлите скриншот: по нему видно, какая площадка годится
+   для прокси в России.
+
+   Почему запросы идут с mode:"no-cors". Чужой ответ читать не нужно — важно
+   только, ответили или нет. Обычный fetch тут не годится: без заголовков CORS он
+   падает с «Failed to fetch» даже когда сеть в полном порядке, и «недоступен»
+   получилось бы у всех подряд. С no-cors промис отклоняется только при настоящей
+   сетевой неудаче: DNS, отказ в соединении или таймаут. Ответ 404 или 403 —
+   это всё равно «доступен»: важен факт связи, а не страница. */
+const CHECK = new URLSearchParams(location.search).get("check") === "1";
+
+const CHECK_URLS = [
+  "https://api.telegram.org/",                            // виден ли вообще Telegram API
+  "https://functions.yandexcloud.net/",                   // плечо внутри РФ
+  "https://kvartorio-lead-proxy.kvartorio.workers.dev/",  // контроль: известно, что блокируется
+  "https://vercel.com/",                                  // площадки, где не нужна карта
+  "https://script.google.com/",
+  "https://deno.com/",
+  "https://www.google.com/generate_204"                    // контроль: обычный интернет
+];
+
+async function checkOne(url, timeoutMs){
+  const t0 = Date.now();
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
+  try{
+    await fetch(url, { mode:"no-cors", signal: ctl.signal, cache:"no-store" });
+    clearTimeout(timer);
+    return { ok:true, ms: Date.now() - t0 };
+  }catch(e){
+    clearTimeout(timer);
+    return { ok:false, ms: Date.now() - t0,
+             err: (e && e.name === "AbortError")
+                  ? "висит, ответа нет за " + (timeoutMs / 1000) + " с"
+                  : ((e && e.message) || "нет связи") };
+  }
+}
+
+async function runCheck(){
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  const bar = document.getElementById("bar");
+  if(bar) bar.classList.remove("on");
+  document.getElementById("backBtn").style.visibility = "hidden";
+
+  const s = document.createElement("div");
+  s.className = "screen active";
+  s.id = "s-check";
+  s.innerHTML =
+    '<div class="q-screen">' +
+      '<div class="eyebrow">Проверка связи</div>' +
+      '<h1>Что доступно из этой сети</h1>' +
+      '<div class="sub">Откройте эту страницу с телефона, без обходов и VPN, ' +
+        'и пришлите скриншот — по нему будет видно, какой адрес годится для заявок.</div>' +
+      '<div id="check-out" class="debug-box on" style="margin-top:18px">Проверяю…</div>' +
+    '</div>';
+  document.getElementById("main").appendChild(s);
+
+  const conn = navigator.connection || {};
+  const results = await Promise.all(CHECK_URLS.map(u => checkOne(u, 4000)));
+
+  const row = (name, value) =>
+    '<div class="dbg-row"><span>' + name + '</span><b>' + value + '</b></div>';
+
+  const head = [
+    row("Тип сети", conn.effectiveType || "—"),
+    row("Интернет", navigator.onLine ? "есть" : "нет"),
+    row("Экономия трафика", conn.saveData ? "включена" : "выключена")
+  ].join("");
+
+  const list = CHECK_URLS.map((u, i) => {
+    const r = results[i];
+    const verdict = r.ok
+      ? '<b style="color:#7FD18A">доступен за ' + r.ms + ' мс</b>'
+      : '<b style="color:#E08A73">' + r.err + '</b>';
+    return '<div class="dbg-row"><span>' + u.replace(/^https?:\/\//, "").replace(/\/$/, "") +
+           '</span>' + verdict + '</div>';
+  }).join("");
+
+  document.getElementById("check-out").innerHTML =
+    '<div class="dbg-title">Сеть</div>' + head +
+    '<div class="dbg-title" style="margin-top:14px">Адреса</div>' + list;
+}
+
+/* ── ТОЧКА ВХОДА ──
+   Прокси проверяем сразу при открытии: человек проходит квиз две минуты, за это
+   время результат готов, и на отправке ждать нечего. Если проверка не успела или
+   результат протух — sendLead() проверит ещё раз сам.
+   Стоит ПОСЛЕ объявлений: const CHECK ниже по файлу попал бы в мёртвую зону. */
+if(CHECK) runCheck(); else probeAllInBackground();
 </script>
 </body>
 </html>
