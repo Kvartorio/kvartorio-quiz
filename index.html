@@ -7,15 +7,16 @@
 <meta name="description" content="Ответьте на 6 коротких вопросов — и получите персональную подборку квартир в новостройках Тюмени от риелтора Руслана Халимуллина. Бесплатно, комиссия 0 ₽.">
 <meta name="theme-color" content="#0A0806">
 <link rel="icon" href="logo_head.png">
-<!-- Превью ссылки в Telegram/VK/WhatsApp. ВАЖНО: og:image требует АБСОЛЮТНЫЙ адрес —
-     после публикации подставьте реальный домен вместо https://ВАШ-АДРЕС/ -->
+<!-- Превью ссылки в Telegram/VK/WhatsApp.
+     Абсолютный адрес подставлен автоматически скриптом _tools/build_publish.py -->
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://kvartorio.github.io/kvartorio-quiz/">
+<meta property="og:image:width" content="1080">
+<meta property="og:image:height" content="1080">
 <meta property="og:title" content="Подборка квартир в новостройках Тюмени за 2 минуты">
 <meta property="og:description" content="6 вопросов → персональная подборка ЖК с ценами, сроками и честными минусами. Бесплатно, комиссия 0 ₽.">
-<meta property="og:image" content="https://ВАШ-АДРЕС/logo.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Prata&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta property="og:image" content="https://kvartorio.github.io/kvartorio-quiz/logo.png">
+<link rel="stylesheet" href="fonts/fonts.css">
 <style>
   :root{
     --bg:#0A0806;
@@ -383,7 +384,7 @@ const CONFIG = {
     "https://kvartorio-lead-proxy.netlify.app/api/submit"
   ],
   TG_BOT_USERNAME: "kvartorio_bot",
-  PDF_URL: "",
+  PDF_URL: "https://kvartorio.github.io/kvartorio-quiz/5-oshibok-pri-pokupke-novostroyki.pdf",
   TG_CHANNEL: "",
   TG_DIRECT: ""
 };
@@ -899,19 +900,19 @@ const CHECK = new URLSearchParams(location.search).get("check") === "1";
    Отметки «проверено 20.09» — результат замеров с телефона Руслана. */
 const CHECK_URLS = [
   "https://www.google.com/generate_204",                 // контроль: есть ли вообще интернет
-  "https://functions.yandexcloud.net/",                  // Яндекс Облако — ДОСТУПЕН с телефона (176 мс)
-  "https://securelay.vercel.app/",                       // Vercel — ДОСТУПЕН с телефона (643 мс)
-  "https://vercel.app/",                                 // Vercel, тот же рантайм
+  "https://kvartorio-lead-proxy.netlify.app/api/submit", // НАШ ПРОКСИ. Главная строка: красная — заявки не уйдут
+  "https://kvartorio-lead-proxy.netlify.app/",           // сам сайт прокси
+  "https://www.netlify.com/",                            // площадка Netlify (витрина, а не наш адрес)
+  "https://app.netlify.com/",                            // панель Netlify
   "https://www.cloudflare.com/",                         // Cloudflare на своём домене — доступен, значит блок идёт по имени, а не по адресам
-  "https://kvartorio-lead-proxy.kvartorio.workers.dev/", // НАШ воркер на Cloudflare — НЕДОСТУПЕН с телефона
+  "https://kvartorio-lead-proxy.kvartorio.workers.dev/", // прежний воркер на Cloudflare — НЕДОСТУПЕН с телефона
   "https://pages.dev/",                                  // Cloudflare Pages — тоже недоступен
-  "https://www.netlify.com/",                            // Netlify — сайт и CDN
-  "https://app.netlify.com/",                            // Netlify — панель
   "https://fresh.deno.dev/",                             // Deno Deploy — РАНТАЙМ-домен *.deno.dev (это не то же, что deno.com!)
   "https://dash.deno.com/",                              // Deno Deploy — панель
+  "https://functions.yandexcloud.net/",                  // Яндекс Облако
+  "https://api.github.com/",                             // GitHub API (и сам квиз живёт на GitHub Pages)
   "https://supabase.com/",                               // Supabase
   "https://app.koyeb.com/",                              // Koyeb
-  "https://api.github.com/",                             // GitHub API — запасной вариант через Actions
   "https://api.telegram.org/"                            // сам Telegram API — НЕДОСТУПЕН с телефона
 ];
 
