@@ -7,16 +7,15 @@
 <meta name="description" content="Ответьте на 6 коротких вопросов — и получите персональную подборку квартир в новостройках Тюмени от риелтора Руслана Халимуллина. Бесплатно, комиссия 0 ₽.">
 <meta name="theme-color" content="#0A0806">
 <link rel="icon" href="logo_head.png">
-<!-- Превью ссылки в Telegram/VK/WhatsApp.
-     Абсолютный адрес подставлен автоматически скриптом _tools/build_publish.py -->
+<!-- Превью ссылки в Telegram/VK/WhatsApp. ВАЖНО: og:image требует АБСОЛЮТНЫЙ адрес —
+     после публикации подставьте реальный домен вместо https://ВАШ-АДРЕС/ -->
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://kvartorio.github.io/kvartorio-quiz/">
-<meta property="og:image:width" content="1080">
-<meta property="og:image:height" content="1080">
 <meta property="og:title" content="Подборка квартир в новостройках Тюмени за 2 минуты">
 <meta property="og:description" content="6 вопросов → персональная подборка ЖК с ценами, сроками и честными минусами. Бесплатно, комиссия 0 ₽.">
-<meta property="og:image" content="https://kvartorio.github.io/kvartorio-quiz/logo.png">
-<link rel="stylesheet" href="fonts/fonts.css">
+<meta property="og:image" content="https://ВАШ-АДРЕС/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prata&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#0A0806;
@@ -364,24 +363,27 @@ const CONFIG = {
      Адреса, которые ещё не развёрнуты, не мешают: проверка считает живым только
      ответ 405/204/200 (PROBE_OK_STATUS), а неразвёрнутый проект отвечает 404.
 
-     Как это устроено сейчас (20.09.2026). Замеры с телефона Руслана показали,
+     Как это устроено сейчас (21.09.2026). Замеры с телефона Руслана показали,
      что видно из его сети, а что нет:
-       ДОСТУПНЫ: Netlify (280 мс), Deno Deploy (1118 мс), Vercel (651 мс),
-                 Яндекс Облако (211 мс), GitHub (324 мс)
+       ДОСТУПНЫ: Netlify (271 мс), Deno Deploy (694 мс), Vercel (734 мс),
+                 Яндекс Облако (211 мс), GitHub (265 мс)
        НЕДОСТУПНЫ: api.telegram.org, Cloudflare Workers и Pages, Google Apps Script
-     Поэтому основной путь — Netlify: одно плечо, телефон → прокси → Telegram.
-     Рядом ставим Deno Deploy (адрес добавится, когда будет известен) — две
-     независимые площадки вместо одной. Инструкция — ЗАЛИТЬ_НА_ПРОКСИ/README.md.
+     Поэтому рабочий путь — Netlify: одно плечо, телефон → прокси → Telegram.
+     Проверено 21.09.2026 на живом адресе: заявка уходит за ~1,2 с.
 
-     Почему Cloudflare оставлен в списке. Это наш первый вариант, и он рабочий
-     технически — но `*.workers.dev` из России не виден вообще (соединение висит
-     до таймаута). Держим как напоминание, а не как рабочий адрес. */
+     Почему Cloudflare убран из списка. Это был первый вариант, технически
+     рабочий, но `*.workers.dev` из России не виден вообще (соединение висит до
+     таймаута), и токен того воркера отозван. Держать его в списке — риск:
+     на сети с обходом он мог выиграть гонку «самый быстрый» и вернуть ошибку.
+     Заявку терять нельзя, поэтому мёртвых адресов здесь быть не должно.
+
+     Deno Deploy поставим второй площадкой, когда будет готов аккаунт, —
+     тогда здесь появится второй адрес. Клиент сам выбирает самый быстрый живой. */
   WORKER_URLS: [
-    "https://kvartorio-lead-proxy.netlify.app/api/submit",
-    "https://kvartorio-lead-proxy.kvartorio.workers.dev"
+    "https://kvartorio-lead-proxy.netlify.app/api/submit"
   ],
   TG_BOT_USERNAME: "kvartorio_bot",
-  PDF_URL: "https://kvartorio.github.io/kvartorio-quiz/5-oshibok-pri-pokupke-novostroyki.pdf",
+  PDF_URL: "",
   TG_CHANNEL: "",
   TG_DIRECT: ""
 };
