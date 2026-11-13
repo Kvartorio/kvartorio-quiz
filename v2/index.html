@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Kvartorio — подборка квартир в новостройках Тюмени</title>
+<meta name="description" content="Ответьте на 6 коротких вопросов — и получите персональную подборку квартир в новостройках Тюмени от риелтора Руслана Халимуллина. Бесплатно, комиссия 0 ₽.">
+<meta name="theme-color" content="#072C2C">
+<link rel="icon" href="logo_head.png">
+<link rel="canonical" href="https://kvartorio.github.io/kvartorio-quiz/v2/">
+<!-- Превью ссылки в Telegram/VK/WhatsApp. og:image — абсолютный адрес картинки,
+     которая уже опубликована в корне репозитория. -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kvartorio.github.io/kvartorio-quiz/v2/">
+<meta property="og:title" content="Подборка квартир в новостройках Тюмени за 2 минуты">
+<meta property="og:description" content="6 вопросов → персональная подборка ЖК с ценами, сроками и честными минусами. Бесплатно, комиссия 0 ₽.">
+<meta property="og:image" content="https://kvartorio.github.io/kvartorio-quiz/logo.png">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  /* ═══════════ ДИЗАЙН-ТОКЕНЫ (система Stitch) ═══════════
+     Палитра: тёмный тил + оранжевый акцент на бежевом холсте.
+     Шрифты: Oswald (дисплей), Ubuntu (текст), Ubuntu Mono (данные).
+     Все цвета текста проверены на контраст по WCAG 2.2 AA. */
+  :root{
+    --primary:#072C2C;        /* фирменный тёмный тил */
+    --primary-deep:#052121;   /* нажатие/наведение на тиле */
+    --accent:#FF5F03;         /* оранжевый акцент: CTA, выбранные состояния */
+    --accent-deep:#E05400;    /* наведение на оранжевом */
+    --accent-ink:#A63F00;     /* тёмно-оранжевый: мелкий текст на светлом, AA */
+    --success:#16A34A;
+    --warning:#D97706;
+    --danger:#DC2626;         /* границы и иконки ошибок */
+    --danger-ink:#B91C1C;     /* текст ошибок, AA на бежевом */
+    --surface:#EDEADE;        /* бежевый холст страницы */
+    --card:#FFFFFF;           /* белые карточки */
+    --line:#D9D4C2;           /* тонкие линии на бежевом */
+    --line-strong:#C6C0AC;
+    --text:#111827;           /* основной текст */
+    --text-soft:#2F4444;      /* второстепенный текст, тил-серый */
+    --muted:#4E5E5E;          /* подписи, AA на бежевом и белом */
+    --on-dark:#EDEADE;        /* текст на тёмном тиле */
+    --on-dark-soft:#C6CFC5;   /* второстепенный текст на тёмном тиле */
+    --line-on-dark:rgba(237,234,222,.16);
+    --radius-lg:16px;
+    --radius:12px;
+    --ring:0 0 0 3px rgba(7,44,44,.12);
+    --shadow-card:0 1px 2px rgba(7,44,44,.05), 0 10px 28px -18px rgba(7,44,44,.35);
+    --shadow-btn:0 10px 22px -12px rgba(224,84,0,.55);
+    --display:'Oswald','Arial Narrow',sans-serif;
+    --sans:'Ubuntu','Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+    --mono:'Ubuntu Mono','Consolas',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{height:100%}
+  body{
+    min-height:100%;
+    /* бежевый холст с тихой точечной сеткой и холодным свечением сверху */
+    background:
+      radial-gradient(900px 420px at 50% -10%, rgba(7,44,44,.07), transparent 60%),
+      radial-gradient(rgba(7,44,44,.05) 1px, transparent 1.3px) 0 0/22px 22px,
+      var(--surface);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.55;
+    display:flex;justify-content:center;
+    padding:14px 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  /* фирменная полоса поверх страницы: тил с оранжевым сегментом */
+  body::before{
+    content:"";position:fixed;top:0;left:0;right:0;height:4px;z-index:10;
+    background:linear-gradient(90deg,var(--primary) 0 72%,var(--accent) 72% 100%);
+  }
+  .app{
+    width:100%;max-width:540px;position:relative;
+    display:flex;flex-direction:column;
+    min-height:calc(100dvh - 30px - env(safe-area-inset-bottom));
+    padding-top:10px;
+  }
+  main{flex:1;display:flex;flex-direction:column}
+
+  /* ── шапка ── */
+  .head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .brand-mark{
+    width:40px;height:40px;flex:none;border-radius:10px;
+    background:var(--primary);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .brand-mark svg{width:22px;height:22px;display:block}
+  .brand-name{
+    font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:4px;
+    text-transform:uppercase;color:var(--primary);line-height:1;
+  }
+  .brand-tag{font-size:11px;color:var(--muted);letter-spacing:.3px;margin-top:3px}
+  .pill{
+    font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.6px;
+    color:var(--primary);background:var(--card);
+    border:1px solid var(--line-strong);
+    padding:6px 12px;border-radius:99px;white-space:nowrap;flex:none;
+  }
+
+  /* ── полоса шага: назад + сегментный прогресс + счётчик ── */
+  .bar{display:none;align-items:center;gap:12px;margin-bottom:20px;min-height:36px}
+  .bar.on{display:flex}
+  .back{
+    width:36px;height:36px;flex:none;border-radius:50%;
+    border:1px solid var(--line-strong);background:var(--card);color:var(--text-soft);
+    font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:border-color .18s,color .18s,background .18s;font-family:var(--sans);
+  }
+  .back:hover{border-color:var(--primary);color:var(--primary);background:#F7F5EC}
+  .back:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .back:active{transform:scale(.94)}
+  .segs{display:flex;gap:6px;flex:1}
+  .seg{height:4px;flex:1;border-radius:99px;background:var(--line);transition:background .35s ease}
+  .seg.done{background:var(--primary)}
+  .seg.on{background:var(--accent)}
+  .step{font-family:var(--mono);font-size:13px;font-weight:400;letter-spacing:1px;color:var(--muted);white-space:nowrap;flex:none}
+  .step b{color:var(--primary);font-weight:700}
+
+  /* ── экраны ── */
+  .screen{display:none}
+  .screen.active{display:flex;flex-direction:column;flex:1;animation:rise .42s cubic-bezier(.22,1,.36,1)}
+  @media (prefers-reduced-motion: reduce){ .screen.active{animation:none} .seg{transition:none} }
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:2.2px;
+    text-transform:uppercase;color:var(--accent-ink);margin-bottom:12px;
+  }
+  h1{
+    font-family:var(--display);font-weight:600;font-size:31px;line-height:1.18;
+    letter-spacing:.4px;text-transform:uppercase;
+    margin-bottom:12px;color:var(--text);text-wrap:balance;
+  }
+  .sub{color:var(--text-soft);font-size:15.5px;margin-bottom:22px;line-height:1.6}
+
+  /* ── тёмный тил-блок (обложка и финал) ── */
+  .hero{
+    background:var(--primary);color:var(--on-dark);
+    border-radius:var(--radius-lg);
+    border-top:3px solid var(--accent);
+    padding:24px 22px 26px;
+    box-shadow:var(--shadow-card);
+  }
+  .hero .eyebrow{color:var(--accent)}
+  .hero h1{color:var(--on-dark);margin-bottom:10px}
+  .hero .sub{color:var(--on-dark-soft);margin-bottom:0}
+  .hero + *{margin-top:18px}
+
+  /* ── карточка эксперта ── */
+  .expert{
+    display:flex;gap:14px;align-items:center;
+    border:1px solid var(--line);border-radius:var(--radius-lg);
+    padding:14px;margin-bottom:14px;background:var(--card);
+    box-shadow:var(--shadow-card);
+  }
+  .expert img{width:72px;height:72px;border-radius:12px;object-fit:cover;object-position:center 18%;flex:none}
+  .expert-name{font-family:var(--display);font-weight:500;font-size:17px;letter-spacing:1px;text-transform:uppercase;color:var(--primary);margin-bottom:4px}
+  .expert-role{font-size:13px;color:var(--muted);line-height:1.45}
+
+  /* ── примечание «почему бесплатно» ── */
+  .why{
+    background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:var(--radius);padding:13px 16px;margin-bottom:8px;
+    font-size:13.5px;color:var(--text-soft);line-height:1.6;
+    box-shadow:var(--shadow-card);
+  }
+
+  /* ── ответы ── */
+  .answers{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .answers.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .answer{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;position:relative;
+    background:var(--card);border:1.5px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;color:var(--text);font-size:15.5px;font-weight:500;font-family:var(--sans);cursor:pointer;
+    transition:border-color .18s,background .18s,box-shadow .18s,transform .12s;
+    min-height:56px;box-shadow:var(--shadow-card);
+  }
+  .answers.tiles .answer{
+    min-height:80px;align-items:flex-start;flex-direction:column;justify-content:center;
+    padding:13px 14px;gap:4px;
+  }
+  .answer:hover{border-color:var(--primary)}
+  .answer:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .answer:active{transform:scale(.985)}
+  .answer.selected{border-color:var(--primary);background:#F4F7F6;box-shadow:var(--ring),var(--shadow-card)}
+  .answer .letter{
+    font-family:var(--mono);font-weight:700;color:var(--primary);font-size:13.5px;
+    width:26px;height:26px;flex:none;border-radius:50%;
+    border:1px solid var(--line-strong);background:#F7F5EC;
+    display:flex;align-items:center;justify-content:center;
+    transition:background .18s,color .18s,border-color .18s;
+  }
+  .answer.selected .letter{background:var(--primary);color:var(--on-dark);border-color:var(--primary)}
+  .pick-t{font-size:15.5px;font-weight:700;line-height:1.3}
+  .pick-note{font-size:11.5px;font-weight:400;color:var(--muted);line-height:1.35}
+  .answer .note{display:block;font-size:12.5px;font-weight:400;color:var(--muted);margin-top:3px}
+  .answer .txt{min-width:0;flex:1}
+  /* галочка выбранного */
+  .check{
+    position:absolute;top:12px;right:13px;
+    width:20px;height:20px;border-radius:50%;background:var(--accent);
+    display:none;align-items:center;justify-content:center;flex:none;
+  }
+  .check svg{width:11px;height:11px}
+  .answer.selected .check{display:flex}
+  .answers:not(.tiles) .answer.selected{padding-right:44px}
+
+  /* ── кнопки ──
+     Состояния: default / hover / focus-visible / active / disabled / loading — все явно. */
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
+    border:none;border-radius:var(--radius);padding:16px;
+    background:var(--accent);color:var(--primary);
+    font-size:16px;font-weight:700;font-family:var(--sans);cursor:pointer;
+    letter-spacing:.2px;transition:transform .12s,background .18s,box-shadow .18s;
+    box-shadow:var(--shadow-btn);
+  }
+  .btn:hover{background:var(--accent-deep)}
+  .btn:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+  .btn:active{transform:scale(.98);background:var(--primary);color:var(--on-dark)}
+  .btn:disabled{opacity:.75;cursor:default;transform:none}
+  .btn-note{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.5;letter-spacing:.4px}
+
+  /* интро: кнопка прижата к низу, чтобы экран не выглядел пустым */
+  .intro-cta{margin-top:auto;padding-top:24px}
+
+  /* ── форма ── */
+  /* ВАЖНО: здесь НЕЛЬЗЯ задавать display — иначе правило перебьёт .screen{display:none}
+     и все созданные экраны вопросов будут видны одновременно. */
+  .q-screen{min-height:0}
+  .q-screen h1{font-size:24px;line-height:1.22;letter-spacing:.5px;margin-bottom:16px}
+  label{display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:14px 0 7px;font-family:var(--sans)}
+  input[type=text],input[type=tel]{
+    width:100%;background:var(--card);border:1.5px solid var(--line-strong);border-radius:var(--radius);
+    padding:13px 15px;color:var(--text);font-size:16px;outline:none;
+    transition:border-color .18s,box-shadow .18s;font-family:var(--sans);font-weight:500;
+  }
+  input[type=tel]{font-family:var(--mono);font-weight:400;letter-spacing:.5px}
+  input:hover{border-color:var(--primary)}
+  input:focus{border-color:var(--primary);box-shadow:var(--ring)}
+  input::placeholder{color:#8B9494;font-family:var(--sans)}
+  input[type=tel]::placeholder{font-family:var(--mono)}
+  .check-row{display:flex;align-items:flex-start;gap:10px;margin-top:16px;font-size:13.5px;color:var(--text-soft);cursor:pointer;line-height:1.5;text-transform:none;letter-spacing:0;font-weight:400}
+  .check-row input{margin-top:2px;accent-color:var(--primary);width:18px;height:18px;flex:none}
+  .check-row a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid rgba(166,63,0,.45);font-weight:500}
+  .check-row a:hover{border-bottom-color:var(--accent-ink)}
+  .check-row a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-bottom:none}
+  .consent-box{margin-top:16px;border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;background:var(--card)}
+  .consent-box .check-row{margin-top:0;font-size:13px;line-height:1.55}
+  .consent-note{font-size:11.5px;color:var(--muted);margin-top:7px;padding-left:28px;line-height:1.5}
+  .consent-note a{color:var(--muted);text-decoration:none;border-bottom:1px dotted rgba(78,94,94,.55)}
+  .err{display:none;color:var(--danger-ink);font-size:13px;margin-top:10px;font-weight:500}
+  .err.on{display:block}
+  .form-cta{margin-top:auto;padding-top:22px}
+  .legal{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;line-height:1.55;letter-spacing:.4px}
+
+  /* ── финал ── */
+  .done-mark{
+    width:64px;height:64px;border-radius:50%;
+    background:var(--surface);
+    display:flex;align-items:center;justify-content:center;margin-bottom:16px;
+  }
+  .done-mark svg{width:30px;height:30px}
+  .hero .steps{border:1px solid var(--line-on-dark);border-radius:var(--radius);background:rgba(237,234,222,.05);padding:16px 18px;margin:18px 0 6px}
+  .steps div{display:flex;gap:12px;font-size:14px;color:var(--on-dark-soft);padding:7px 0}
+  .steps b{color:var(--on-dark)}
+  .steps .n{font-family:var(--mono);font-weight:700;color:var(--accent);flex:none;width:18px}
+  .link-btn{
+    display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;
+    border:1.5px solid var(--line-strong);border-radius:var(--radius);padding:14px;background:var(--card);
+    color:var(--primary);font-size:15px;font-weight:700;margin-top:11px;
+    transition:border-color .18s,background .18s,transform .12s;
+    box-shadow:var(--shadow-card);
+  }
+  .link-btn:hover{border-color:var(--primary);background:#F7F5EC}
+  .link-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .link-btn:active{transform:scale(.98)}
+  .link-btn.gold{border-color:var(--accent);background:var(--accent);color:var(--primary)}
+  .link-btn.gold:hover{background:var(--accent-deep);border-color:var(--accent-deep)}
+  .fallback{display:none;margin-top:16px;border:1px solid rgba(217,119,6,.5);background:rgba(217,119,6,.08);border-radius:var(--radius);padding:14px 16px;font-size:14px;color:var(--text-soft)}
+  .fallback.on{display:block}
+  .fallback a{color:var(--accent-ink);font-weight:700}
+  .fb-copy{margin-top:10px}
+  .fb-copy-btn{background:none;border:0;padding:0;font:inherit;font-size:13px;color:var(--muted);text-decoration:underline;cursor:pointer}
+  .fb-copy-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .fb-copy-btn:active{color:var(--accent-ink)}
+  /* Диагностика — только при ?debug=1, обычным посетителям не видна */
+  .debug-box{display:none;margin-top:16px;border:1px dashed var(--line-strong);border-radius:var(--radius);padding:12px 14px;font-size:12px;color:var(--text-soft);background:var(--card)}
+  .debug-box.on{display:block}
+  .dbg-title{font-family:var(--mono);font-weight:700;letter-spacing:1px;text-transform:uppercase;font-size:11px;color:var(--accent-ink);margin-bottom:8px}
+  .dbg-row{display:flex;justify-content:space-between;gap:12px;padding:3px 0;border-bottom:1px solid rgba(7,44,44,.08);word-break:break-word}
+  .dbg-row b{color:var(--text);font-weight:500;text-align:right;max-width:62%}
+  .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(7,44,44,.3);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── подвал ── */
+  .foot{
+    margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;line-height:1.7;letter-spacing:.6px;text-transform:uppercase;
+  }
+  .foot b{color:var(--text-soft);font-weight:700}
+
+  @media (max-width:420px){
+    h1{font-size:26px}
+    .q-screen h1{font-size:21.5px}
+    .brand-name{font-size:15px;letter-spacing:3px}
+    .hero{padding:20px 18px 22px}
+  }
+  /* Десктоп: экспрессивная типографическая шкала */
+  @media (min-width:720px){
+    body{padding-top:26px}
+    h1{font-size:36px}
+    .hero h1{font-size:34px}
+    .q-screen h1{font-size:26px}
+    .app{max-width:560px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="head">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <!-- стилизованный арочный домкрат — фирменный знак -->
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 20v-8.5C4 7.6 7.6 4 11.6 4h0.8C16.4 4 20 7.6 20 11.5V20" stroke="#FF5F03" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M8.6 20v-7.4c0-2 1.5-3.6 3.4-3.6s3.4 1.6 3.4 3.6V20" stroke="#EDEADE" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Kvartorio</div>
+        <div class="brand-tag">новостройки Тюмени</div>
+      </div>
+    </div>
+    <div class="pill">комиссия 0 ₽</div>
+  </div>
+
+  <div class="bar" id="bar">
+    <button class="back" id="backBtn" onclick="goBack()" aria-label="Назад">&#8592;</button>
+    <div class="segs" id="segs"></div>
+    <div class="step" id="step"></div>
+  </div>
+
+  <main id="main">
+    <!-- ЭКРАН 0: ИНТРО -->
+    <div class="screen active" id="s-intro">
+      <div class="hero">
+        <div class="eyebrow">Тюмень · новостройки · 2026</div>
+        <h1>Подберём квартиру под ваш бюджет и район</h1>
+        <div class="sub">Персональная подборка за 2 минуты. Собираю лично, с ценами и честными минусами каждого варианта.</div>
+      </div>
+
+      <div class="expert">
+        <img src="ruslan.jpg" alt="Руслан Халимуллин">
+        <div class="expert-info">
+          <div class="expert-name">Руслан Халимуллин</div>
+          <div class="expert-role">риелтор · АН «Сова»</div>
+        </div>
+      </div>
+
+      <div class="why">
+        Подборка бесплатная: за приведённого клиента платит застройщик, а не вы.
+        Комиссия по новостройкам — 0 ₽. Работаю внутри АН «Сова», сделка идёт с юридическим сопровождением.
+      </div>
+
+      <div class="intro-cta">
+        <button class="btn" onclick="startQuiz()">Подобрать квартиру</button>
+        <div class="btn-note">6 вопросов · 2 минуты · бесплатно</div>
+      </div>
+    </div>
+
+    <!-- КОНТАКТЫ -->
+    <div class="screen" id="s-contact">
+      <div class="q-screen">
+        <div class="eyebrow">Последний шаг</div>
+        <h1>Как с вами связаться?</h1>
+        <label>Имя</label>
+        <input type="text" id="f-name" placeholder="Как к вам обращаться" autocomplete="name">
+        <label>Телефон</label>
+        <input type="tel" id="f-phone" inputmode="tel" placeholder="+7 (___) ___-__-__" autocomplete="tel">
+        <label>Или Telegram</label>
+        <input type="text" id="f-tg" placeholder="@username" autocomplete="off">
+        <!-- Приманка для ботов: поле скрыто от людей, автозаполнялки его заполняют.
+             Если значение пришло — прокси молча принимает заявку, но никуда не шлёт. -->
+        <input type="text" id="f-hp" name="f-hp" tabindex="-1" autocomplete="off" autocorrect="off"
+               autocapitalize="off" spellcheck="false" aria-hidden="true"
+               data-lpignore="true" data-1p-ignore data-form-type="other"
+               style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+        <div class="err" id="f-err">Укажите телефон или ник в Telegram — иначе я не смогу отправить подборку.</div>
+        <label class="check-row"><input type="checkbox" id="f-pdf" checked> Подарок: PDF «3 ошибки при покупке новостройки»</label>
+        <div class="consent-box">
+          <label class="check-row"><input type="checkbox" id="f-consent"> <span>Я принимаю <a href="https://kvartorio.github.io/kvartorio-quiz/politika.html" target="_blank" rel="noopener">условия Политики конфиденциальности</a> и даю согласие на обработку персональных данных.</span></label>
+          <div class="consent-note">Согласие можно отозвать в любой момент — письмом на <a href="mailto:kvartorio@ya.ru">kvartorio@ya.ru</a>.</div>
+        </div>
+        <div class="err" id="f-err-consent">Без согласия на обработку персональных данных заявку принять нельзя.</div>
+        <div class="form-cta">
+          <button class="btn" id="f-submit" onclick="submitLead()">Отправить заявку</button>
+          <div class="btn-note">никаких рассылок · отвечаю лично · в течение дня</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ГОТОВО -->
+    <div class="screen" id="s-done">
+      <div class="hero">
+        <div class="done-mark">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5l5 5L19.5 7" stroke="#16A34A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h1 id="done-title">Заявка принята</h1>
+        <div class="sub" id="done-sub">Что происходит дальше:</div>
+        <div class="steps">
+          <div><span class="n">1</span><span><b>Я вручную</b> отбираю квартиры под ваши критерии из актуальной базы застройщиков.</span></div>
+          <div><span class="n">2</span><span><b>В течение дня</b> присылаю подборку с ценами, сроками сдачи и честными минусами каждого варианта.</span></div>
+          <div><span class="n">3</span><span>Если вариант понравится — <b>организую показ</b> и сопровождение сделки. Комиссия — 0 ₽.</span></div>
+        </div>
+      </div>
+      <a class="link-btn gold" id="pdf-btn" href="#" target="_blank" style="display:none">Скачать PDF «3 ошибки при покупке»</a>
+      <a class="link-btn" id="tg-btn" href="#" target="_blank" style="display:none">Telegram-канал Kvartorio</a>
+      <div class="fallback" id="fallback"></div>
+      <div class="debug-box" id="debug-box"></div>
+    </div>
+  </main>
+
+  <div class="foot">
+    <b>Руслан Халимуллин</b> · риелтор, АН «Сова» · Тюмень<br>
+    Новостройки · комиссия 0 ₽ · подборку собираю лично
+  </div>
+</div>
+
+<script>
+/* ═══════════ КОНФИГ ═══════════
+ * WORKER_URLS — адреса прокси, которые отправляют заявки в Telegram. Токен бота
+ *   лежит в секретах прокси и в браузер не попадает. Если список пуст, заявка
+ *   уйдёт только кнопкой-страховкой в Telegram.
+ * PDF_URL — абсолютный адрес подарочного PDF, опубликованного в корне репозитория.
+ * ═══════════════════════════════ */
+const CONFIG = {
+  /* Адреса прокси, куда уходит заявка. Клиент проверяет все сразу при открытии
+     страницы и на отправке берёт самый быстрый живой. Порядок в списке ни на что
+     не влияет — можно смело держать здесь и рабочий адрес, и запасные.
+     Адреса, которые ещё не развёрнуты, не мешают: проверка считает живым только
+     ответ 405/204/200 (PROBE_OK_STATUS), а неразвёрнутый проект отвечает 404.
+
+     Как это устроено сейчас (21.09.2026). Замеры с телефона Руслана показали,
+     что видно из его сети, а что нет:
+       ДОСТУПНЫ: Netlify (271 мс), Deno Deploy (694 мс), Vercel (734 мс),
+                 Яндекс Облако (211 мс), GitHub (265 мс)
+       НЕДОСТУПНЫ: api.telegram.org, Cloudflare Workers и Pages, Google Apps Script
+     Поэтому рабочий путь — Netlify: одно плечо, телефон → прокси → Telegram.
+     Проверено 21.09.2026 на живом адресе: заявка уходит за ~1,2 с.
+
+     Почему Cloudflare убран из списка. Это был первый вариант, технически
+     рабочий, но `*.workers.dev` из России не виден вообще (соединение висит до
+     таймаута), и токен того воркера отозван. Держать его в списке — риск:
+     на сети с обходом он мог выиграть гонку «самый быстрый» и вернуть ошибку.
+     Заявку терять нельзя, поэтому мёртвых адресов здесь быть не должно.
+
+     Deno Deploy поставим второй площадкой, когда будет готов аккаунт, —
+     тогда здесь появится второй адрес. Клиент сам выбирает самый быстрый живой. */
+  WORKER_URLS: [
+    "https://kvartorio-lead-proxy.netlify.app/api/submit"
+  ],
+  TG_BOT_USERNAME: "kvartorio_bot",
+  PDF_URL: "https://kvartorio.github.io/kvartorio-quiz/3-oshibki-pri-pokupke-novostroyki.pdf",
+  TG_CHANNEL: "",
+  TG_DIRECT: ""
+};
+
+/* layout: "list" — строки с буквами, "tiles" — плитки 2 в ряд */
+const QUESTIONS = [
+  { key:"q1", title:"Для чего вам квартира?", layout:"list", answers:[
+    {t:"Для жизни", note:"собственное жильё"},
+    {t:"Для семьи", note:"важны школы, детсады, дворы"},
+    {t:"Как инвестиция", note:"под сдачу или перепродажу"},
+    {t:"Пока изучаю варианты", note:"выбираю, спешить некуда"} ]},
+  { key:"q2", title:"Какой бюджет?", layout:"tiles", answers:[
+    {t:"До 5,5 млн ₽"},
+    {t:"5,5–8 млн ₽"},
+    {t:"8–11 млн ₽"},
+    {t:"От 11 млн ₽"} ]},
+  { key:"q3", title:"Сколько комнат нужно?", layout:"tiles", answers:[
+    {t:"Студия"},
+    {t:"Одна комната"},
+    {t:"Две"},
+    {t:"Три и больше"},
+    {t:"Посоветуйте", note:"подберём формат под бюджет"} ]},
+  { key:"district", title:"В каком районе Тюмени хотите купить?", layout:"list", answers:[
+    {t:"Центр / КПД / Район ВУЗов"},
+    {t:"Зарека"},
+    {t:"Тюменская Слобода / Червишевский тракт / Комарово"},
+    {t:"Плеханово / Московский тракт"},
+    {t:"Дом Обороны / ДОК"},
+    {t:"Восточный"},
+    {t:"Пригород"},
+    {t:"Не определился / Рассмотрю все варианты"} ]},
+  { key:"q4", title:"Что важнее всего?", layout:"tiles", answers:[
+    {t:"Инфраструктура", note:"школы, детсады, поликлиники"},
+    {t:"Транспорт и парковка", note:"дорога до центра, место для машины"},
+    {t:"Тишина и зелень", note:"дальше от трасс, ближе к паркам"},
+    {t:"Максимальная выгода", note:"лучшая цена за метр"} ]},
+  { key:"q5", title:"Когда планируете покупку?", layout:"tiles", answers:[
+    {t:"В течение 1–2 месяцев"},
+    {t:"Через 3–6 месяцев"},
+    {t:"Через полгода и позже"},
+    {t:"Пока просто смотрю"} ]}
+];
+
+const LETTERS = ["А","Б","В","Г","Д","Е","Ж","З"];
+/* t0 — момент старта квиза. Уходит на прокси как elapsed: если заявка пришла
+   быстрее, чем человек физически проходит 6 вопросов, это бот. */
+const state = { answers:{}, screen:"intro", utm:{}, t0:0 };
+
+/* Диагностический режим. Открыть страницу с ?debug=1 — на экране «Заявка принята»
+   появится панель: что именно ответил прокси, за сколько секунд, с какими полями
+   ушёл запрос. Нужен, чтобы с телефона можно было увидеть причину сбоя, а не гадать.
+   В обычном режиме не влияет ни на что. */
+const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
+(function(){
+  const p = new URLSearchParams(location.search);
+  ["utm_source","utm_medium","utm_campaign","utm_content","ref"].forEach(k=>{
+    const v = p.get(k); if(v) state.utm[k] = v;
+  });
+})();
+
+const app   = document.querySelector(".app");
+const bar   = document.getElementById("bar");
+const segs  = document.getElementById("segs");
+const step  = document.getElementById("step");
+const main  = document.getElementById("main");
+
+/* сегменты прогресса — создаются один раз */
+QUESTIONS.forEach(()=>{ const d = document.createElement("div"); d.className = "seg"; segs.appendChild(d); });
+const segEls = segs.querySelectorAll(".seg");
+
+function setProgress(idx){
+  /* idx: -1 = до старта, 0..N-1 = вопрос, N = контакты/финал */
+  segEls.forEach((el,i)=>{
+    el.className = "seg" + (i < idx ? " done" : i === idx ? " on" : "");
+  });
+  if(idx >= QUESTIONS.length){
+    step.innerHTML = "ФИНАЛ";
+  } else {
+    step.innerHTML = "<b>" + String(idx + 1).padStart(2,"0") + "</b>/" + String(QUESTIONS.length).padStart(2,"0");
+  }
+}
+
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  const el = document.getElementById(id);
+  el.style.animation = "none"; void el.offsetWidth; el.style.animation = "";
+  el.classList.add("active");
+  /* на финальном экране возвращаться некуда — прячем кнопку «назад» */
+  document.getElementById("backBtn").style.visibility = (id === "s-done") ? "hidden" : "visible";
+  window.scrollTo(0,0);
+}
+
+function startQuiz(){
+  state.t0 = Date.now();
+  bar.classList.add("on");
+  renderQuestion(0);
+}
+
+/* ── «Назад»: с 1-го вопроса → на интро, с любого вопроса → на предыдущий,
+      с контактов → на последний вопрос. ── */
+function goBack(){
+  if(state.screen === "contact"){ renderQuestion(QUESTIONS.length-1); return; }
+  if(typeof state.screen === "number"){
+    if(state.screen > 0) renderQuestion(state.screen-1);
+    else showIntro();
+  }
+}
+function showIntro(){
+  state.screen = "intro";
+  bar.classList.remove("on");
+  show("s-intro");
+}
+
+function renderQuestion(i){
+  state.screen = i;
+  let s = document.getElementById("s-q"+i);
+  if(!s){
+    s = document.createElement("div");
+    s.className = "screen q-screen"; s.id = "s-q"+i;
+    const q = QUESTIONS[i];
+    const tiles = q.layout === "tiles";
+    const rows = q.answers.map((a,ai)=>{
+      const sel = state.answers[q.key]===a.t ? " selected" : "";
+      const check = '<span class="check"><svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5l5 5L19.5 7" stroke="#072C2C" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+      if(tiles){
+        return '<button class="answer'+sel+'" data-i="'+ai+'" onclick="pick('+i+','+ai+',this)">' +
+               '<span class="pick-t">'+a.t+'</span>' +
+               (a.note ? '<span class="pick-note">'+a.note+'</span>' : '') + check + '</button>';
+      }
+      const note = a.note ? '<span class="note">'+a.note+'</span>' : '';
+      return '<button class="answer'+sel+'" data-i="'+ai+'" onclick="pick('+i+','+ai+',this)">' +
+             '<span class="letter">'+LETTERS[ai]+'</span><span class="txt">'+a.t+note+'</span>' + check + '</button>';
+    }).join("");
+    s.innerHTML =
+      '<div class="eyebrow">Вопрос '+(i+1)+' / '+QUESTIONS.length+'</div>' +
+      '<h1>'+q.title+'</h1>' +
+      '<div class="answers'+(tiles?" tiles":"")+'">'+rows+'</div>';
+    main.insertBefore(s, document.getElementById("s-contact"));
+  }
+  if(state.answers[QUESTIONS[i].key]){
+    const idx = QUESTIONS[i].answers.findIndex(a=>a.t===state.answers[QUESTIONS[i].key]);
+    s.querySelectorAll(".answer").forEach((b,bi)=>b.classList.toggle("selected", bi===idx));
+  }
+  setProgress(i);
+  show("s-q"+i);
+}
+
+function pick(qi, ai, btn){
+  document.querySelectorAll("#s-q"+qi+" .answer").forEach(b=>b.classList.remove("selected"));
+  btn.classList.add("selected");
+  state.answers[QUESTIONS[qi].key] = QUESTIONS[qi].answers[ai].t;
+  setTimeout(()=>{
+    if(qi+1 < QUESTIONS.length) renderQuestion(qi+1);
+    else { state.screen = "contact"; setProgress(QUESTIONS.length); show("s-contact"); }
+  }, 280);
+}
+
+/* ── маска телефона: +7 (999) 123-45-67 ── */
+function maskPhone(el){
+  let d = el.value.replace(/\D/g,"");
+  if(!d){ el.value = ""; return; }
+  if(d[0] === "8") d = "7" + d.slice(1);
+  if(d[0] !== "7") d = "7" + d;
+  d = d.slice(0,11);
+  let out = "+7";
+  if(d.length > 1) out += " (" + d.slice(1,4);
+  if(d.length >= 5) out += ") " + d.slice(4,7);
+  if(d.length >= 8) out += "-" + d.slice(7,9);
+  if(d.length >= 10) out += "-" + d.slice(9,11);
+  el.value = out;
+}
+
+function validateContact(){
+  const phone = document.getElementById("f-phone").value.trim();
+  const tg = document.getElementById("f-tg").value.trim();
+  const err = document.getElementById("f-err");
+  const consent = document.getElementById("f-consent");
+  const errConsent = document.getElementById("f-err-consent");
+  const phoneOk = phone.replace(/\D/g,"").length >= 11;
+  const tgOk = tg.replace(/[^A-Za-z0-9_@]/g,"").length >= 4;
+  let ok = true;
+  if(!phoneOk && !tgOk){ err.classList.add("on"); ok = false; } else err.classList.remove("on");
+  if(!consent.checked){ errConsent.classList.add("on"); ok = false; } else errConsent.classList.remove("on");
+  if(!ok){
+    const first = document.querySelector(".err.on");
+    if(first) first.scrollIntoView({block:"center", behavior:"smooth"});
+    return null;
+  }
+  return {
+    name: document.getElementById("f-name").value.trim(),
+    phone: phone, tg: tg,
+    pdf: document.getElementById("f-pdf").checked
+  };
+}
+
+/* Текст заявки — только для кнопки-страховки: она открывает Telegram с готовым
+   сообщением. Боевую заявку текст собирает прокси, а не браузер: так со стороны
+   клиента нельзя подделать структуру или дописать «согласие получено». */
+function leadText(c){
+  const utmStr = Object.keys(state.utm).map(k=>k+"="+state.utm[k]).join(", ") || "прямая ссылка";
+  return "НОВАЯ ЗАЯВКА С КВИЗА\n" +
+    "Имя: " + (c.name || "—") + "\n" +
+    "Тел: " + (c.phone || "—") + "\n" +
+    "TG: " + (c.tg || "—") + "\n" +
+    "Цель: " + state.answers.q1 + "\n" +
+    "Бюджет: " + state.answers.q2 + "\n" +
+    "Комнаты: " + state.answers.q3 + "\n" +
+    "Район: " + state.answers.district + "\n" +
+    "Важно: " + state.answers.q4 + "\n" +
+    "Срок: " + state.answers.q5 + "\n" +
+    "PDF: " + (c.pdf ? "да" : "нет") + "\n" +
+    "Согласие на ПДн: да\n" +
+    "Источник: " + utmStr;
+}
+
+/* Заявка для прокси: структура, а не готовый текст. */
+function leadPayload(c){
+  const p = {
+    name: c.name,
+    phone: c.phone,
+    tg: c.tg,
+    answers: {
+      q1: state.answers.q1, q2: state.answers.q2, q3: state.answers.q3,
+      district: state.answers.district, q4: state.answers.q4, q5: state.answers.q5
+    },
+    pdf: c.pdf,
+    consent: true,
+    utm: Object.keys(state.utm).map(k=>k+"="+state.utm[k]).join(", "),
+    hp: (document.getElementById("f-hp") || {}).value || ""
+  };
+  /* elapsed отправляем только если время старта известно. Ноль прокси считает
+     признаком бота, поэтому лучше не отправлять поле вовсе, чем отправить ноль. */
+  if(state.t0) p.elapsed = Date.now() - state.t0;
+  if(DEBUG) p.dbg = true;
+  return p;
+}
+
+/* Отправка заявки через прокси. Токен бота живёт в секретах прокси и в браузер
+   не попадает.
+
+   ПРО ПОРЯДОК ПРОВЕРОК (20.09.2026). Доступность прокси проверяется ЗАРАНЕЕ,
+   при открытии страницы, в фоне. К моменту нажатия «Отправить» ответ уже есть,
+   поэтому человек не ждёт ничего лишнего. Причина: в России недоступны и
+   Cloudflare (диапазоны режут по DPI), и сам api.telegram.org — то есть обычный
+   путь «браузер → прокси → Telegram» с российских сетей не работает вообще.
+   Проверка при загрузке позволяет не заставлять человека ждать впустую.
+
+   Таймаут самой отправки — 20 с, и попытка одна: прокси сам делает попытки
+   достучаться до Telegram (до ~13 с), поэтому короткий таймаут клиента обрывал
+   запрос раньше, чем прокси заканчивал работу, — получались и ложные
+   «не отправилось», и дубли заявок. 20 с больше 13 с с запасом, но не настолько,
+   чтобы человек ждал впустую: если прокси жив, ответ приходит за секунду.
+
+   Возвращаем не true/false, а подробный результат: на телефоне по нему видно,
+   что именно отвалилось — сеть, прокси или Telegram. */
+async function sendLead(payload){
+  const res = { ok:false, status:0, body:"", ms:0, err:"", url:"", urls:[], probeResults:[] };
+
+  const urls = (CONFIG.WORKER_URLS || []).filter(u => /^https?:\/\//.test(u));
+  res.urls = urls;
+  if(!urls.length){ res.err = "не задан ни один адрес прокси"; return res; }
+
+  /* Берём результат фоновой проверки, если он есть и не протух. Иначе проверяем
+     сейчас: все адреса ОДНОВРЕМЕННО, ждём первый ответивший. Последовательно
+     нельзя — в России Cloudflare не отвечает вообще, и человек ждал бы впустую
+     все 4 секунды его таймаута. Без Promise.any: на телефонах постарше его может
+     не быть, а падение здесь сломало бы всю отправку. */
+  /* Кэш годится, только если список адресов тот же: если конфиг поменяли,
+     проверять надо заново, иначе результат относился бы к другим адресам. */
+  const cached = (relayProbe && Date.now() - relayProbe.at < PROBE_TTL_MS
+                  && relayProbe.urls.join("|") === urls.join("|")) ? relayProbe : null;
+  let probeResults, probeUrls;
+  if(cached){
+    probeUrls = cached.urls; probeResults = cached.results;
+  }else{
+    probeUrls = urls;
+    const probes = urls.map(u => probeOne(u, 4000));
+    probeResults = probes.map(() => null);
+    await new Promise(resolve => {
+      let left = urls.length, settled = false;
+      const finish = () => { if(!settled){ settled = true; resolve(); } };
+      probes.forEach((p, i) => {
+        p.then(r => {
+          probeResults[i] = r;
+          if(!settled && r.ok) finish();
+          else if(--left === 0) finish();
+        });
+      });
+    });
+    relayProbe = { at: Date.now(), urls: urls, results: probeResults };
+  }
+  res.urls = probeUrls;
+  res.probeResults = probeResults;
+
+  /* Берём САМЫЙ БЫСТРЫЙ живой прокси, а не первый по списку: в России живым
+     окажется только узел внутри страны, за границей — Cloudflare, и гадать,
+     какой из них сейчас ближе, не нужно. */
+  let idx = -1, best = Infinity;
+  probeResults.forEach((r, i) => { if(r && r.ok && r.ms < best){ best = r.ms; idx = i; } });
+  if(idx < 0){ res.err = "ни один прокси не доступен из этой сети"; return res; }
+  const target = probeUrls[idx];
+
+  res.url = target;
+  const t0 = Date.now();
+  const ctl = new AbortController();
+  const timer = setTimeout(()=>ctl.abort(), 20000);
+  try{
+    const r = await fetch(target, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(payload),
+      signal: ctl.signal
+    });
+    clearTimeout(timer);
+    res.status = r.status;
+    res.body = (await r.text()).slice(0, 400);
+    try{ res.ok = !!(JSON.parse(res.body) || {}).ok; }catch(e){}
+  }catch(e){
+    clearTimeout(timer);
+    res.err = (e && e.name === "AbortError")
+      ? "таймаут 20 с — прокси не ответил"
+      : ((e && e.message) || String(e));
+  }
+  res.ms = Date.now() - t0;
+  if(!res.ok) console.warn("lead: не ушла —", res.status, res.err, res.body);
+  return res;
+}
+
+/* Результат последней проверки доступности прокси. Живёт до перезагрузки
+   страницы; PROBE_TTL_MS — сколько ему можно доверять. */
+let relayProbe = null;
+const PROBE_TTL_MS = 10 * 60 * 1000;
+
+/* Проверка, дотягивается ли эта сеть до прокси. Наш прокси на GET отвечает 405
+   (method_not_allowed), на OPTIONS — 204. Это и есть признак «это наш прокси, а
+   не заглушка провайдера и не чужая страница».
+   Таймаут обязателен: при DPI-блокировке соединение не отвергается, а просто
+   висит, и без таймаута проверка никогда не закончится.
+
+   Почему нельзя считать живым любой ответ. Если адрес ещё не развёрнут или
+   написан с ошибкой, сервер отвечает 404 — и это быстрый ответ. Без проверки
+   статуса такой адрес выиграл бы гонку «самый быстрый живой» и заявка ушла бы
+   в никуда. Отсюда белый список. Плюс страховка от блокировки: заглушка
+   провайдера отдаёт 200 с чужой страницей, и её тоже не надо принимать за прокси. */
+const PROBE_OK_STATUS = [200, 204, 405];
+
+async function probeOne(url, timeoutMs){
+  const t0 = Date.now();
+  const ctl = new AbortController();
+  const timer = setTimeout(()=>ctl.abort(), timeoutMs);
+  try{
+    const r = await fetch(url, { method:"GET", signal: ctl.signal });
+    clearTimeout(timer);
+    const good = PROBE_OK_STATUS.indexOf(r.status) !== -1;
+    return { ok: good, status: r.status, ms: Date.now()-t0,
+             err: good ? "" : "ответ " + r.status + " — это не наш прокси" };
+  }catch(e){
+    clearTimeout(timer);
+    return { ok:false, status:0, ms: Date.now()-t0,
+             err: (e && e.name === "AbortError") ? "таймаут " + (timeoutMs/1000) + " с" : ((e && e.message) || String(e)) };
+  }
+}
+
+/* Фоновая проверка всех адресов сразу при открытии страницы. Нужна, чтобы
+   к моменту нажатия «Отправить» уже знать, работает ли прокси из этой сети:
+   человек проходит квиз две минуты, проверка давно готова. */
+function probeAllInBackground(){
+  const urls = (CONFIG.WORKER_URLS || []).filter(u => /^https?:\/\//.test(u));
+  if(!urls.length) return;
+  Promise.all(urls.map(u => probeOne(u, 4000).catch(() => null)))
+    .then(results => { relayProbe = { at: Date.now(), urls: urls, results: results }; });
+}
+
+/* Панель диагностики. Видна только при ?debug=1. */
+async function showDebug(res, payload){
+  if(!DEBUG) return;
+  const box = document.getElementById("debug-box");
+  if(!box) return;
+
+  const probeText = (res.urls || []).map((u, i) => {
+    const p = (res.probeResults || [])[i];
+    return u + (p ? (p.ok ? " — доступен за " + p.ms + " мс" : " — НЕДОСТУПЕН (" + p.err + ")")
+                  : " — нет данных");
+  }).join("\n");
+
+  const conn = navigator.connection || {};
+  const lines = [
+    ["Проверка связи", probeText || "— не проверялось —"],
+    ["Куда ушло", res.url || "— никуда —"],
+    ["HTTP-ответ", res.status ? String(res.status) : "нет ответа"],
+    ["Время отправки", res.ms + " мс"],
+    ["Тело ответа", res.body || "— пусто —"],
+    ["Ошибка сети", res.err || "—"],
+    ["Интернет", navigator.onLine ? "есть" : "нет"],
+    ["Тип сети", conn.effectiveType || "неизвестно"],
+    ["Отправлено hp", JSON.stringify(payload.hp)],
+    ["Отправлено elapsed", payload.elapsed === undefined ? "— не отправлялось" : payload.elapsed + " мс"],
+    ["Браузер", navigator.userAgent.slice(0, 90)]
+  ];
+  box.innerHTML = '<div class="dbg-title">Диагностика (debug=1)</div>' +
+    lines.map(l=>'<div class="dbg-row"><span>' + l[0] + '</span><b>' +
+      String(l[1]).replace(/[<>&]/g, c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) +
+      '</b></div>').join('');
+  box.classList.add("on");
+}
+
+async function submitLead(){
+  const c = validateContact(); if(!c) return;
+  const btn = document.getElementById("f-submit");
+  btn.innerHTML = '<span class="spinner"></span>Отправляю…'; btn.disabled = true;
+
+  /* Если сеть медленная, человек не должен думать, что кнопка зависла. */
+  const slow = setTimeout(function(){
+    if(btn.disabled) btn.innerHTML = '<span class="spinner"></span>Ещё отправляю, сеть медленная…';
+  }, 7000);
+
+  const msg = leadText(c);
+  const payload = leadPayload(c);
+  const res = await sendLead(payload);
+  clearTimeout(slow);
+
+  state.screen = "done";
+  setProgress(QUESTIONS.length + 1);
+  show("s-done");
+  const pdfBtn = document.getElementById("pdf-btn"), tgBtn = document.getElementById("tg-btn");
+  if(CONFIG.PDF_URL){ pdfBtn.href = CONFIG.PDF_URL; pdfBtn.style.display = "flex"; }
+  if(CONFIG.TG_CHANNEL){ tgBtn.href = CONFIG.TG_CHANNEL; tgBtn.style.display = "flex"; }
+
+  /* Экран не должен врать: «Заявка принята» пишем только если прокси
+     подтвердил отправку. Иначе заголовок честно говорит, что шаг ещё не сделан.
+     Иконка тоже честная: зелёная галочка — только при подтверждённой отправке,
+     янтарный восклицательный знак — когда нужно действие человека. */
+  const title = document.getElementById("done-title");
+  const sub = document.getElementById("done-sub");
+  const mark = document.querySelector("#s-done .done-mark");
+
+  if(!res.ok){
+    if(title) title.textContent = "Остался последний шаг";
+    if(sub) sub.textContent = "Подтвердите заявку — это одно нажатие:";
+    if(mark) mark.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M12 5.5v8.4" stroke="#D97706" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="18.4" r="1.7" fill="#D97706"/></svg>';
+
+    /* Почему так. С российских сетей обычный путь «браузер → прокси → Telegram»
+       не работает вообще: диапазоны Cloudflare режут по DPI, а сам
+       api.telegram.org недоступен из РФ даже с серверов внутри страны.
+       Единственный канал, который проходит всегда, — открыть Telegram
+       и отправить готовое сообщение. Заявка не теряется. */
+    const fb = document.getElementById("fallback");
+    fb.classList.add("on");
+    const deep = "https://t.me/" + CONFIG.TG_BOT_USERNAME + "?text=" + encodeURIComponent(msg);
+    fb.innerHTML =
+      "<b>Нажмите кнопку — откроется Telegram с уже готовым сообщением.</b> " +
+      "Останется нажать «Отправить». Печатать ничего не нужно.<br><br>" +
+      '<a class="link-btn gold" style="margin-top:0" href="' + deep + '" target="_blank" rel="noopener">Открыть Telegram и отправить</a>' +
+      '<div class="fb-copy"><button type="button" class="fb-copy-btn" id="fb-copy">Скопировать текст заявки</button></div>' +
+      (DEBUG ? "<br>Причина: " + (res.err || ("HTTP " + res.status + " " + res.body)) : "");
+
+    const cp = document.getElementById("fb-copy");
+    if(cp) cp.onclick = function(){
+      const done = function(){ cp.textContent = "Текст скопирован — вставьте его в любой мессенджер"; };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(msg).then(done, function(){ copyViaTextarea(msg); done(); });
+      }else{ copyViaTextarea(msg); done(); }
+    };
+  }else{
+    /* повторная отправка после неудачной: возвращаем честную зелёную галочку */
+    if(mark) mark.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5l5 5L19.5 7" stroke="#16A34A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  await showDebug(res, payload);
+}
+
+/* Запасной способ копирования: navigator.clipboard есть не везде и требует
+   защищённого контекста. Старый трюк с textarea работает на любом телефоне. */
+function copyViaTextarea(text){
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }catch(e){ /* копирование не удалось — человек отправит через Telegram */ }
+}
+
+/* ── клавиатура: 1..9 — выбрать ответ, Backspace — назад ── */
+document.addEventListener("keydown", e=>{
+  if(e.target.matches("input")) return;
+  if(e.key === "Backspace"){ e.preventDefault(); goBack(); return; }
+  const n = parseInt(e.key, 10);
+  if(n >= 1 && n <= 9 && typeof state.screen === "number"){
+    const btn = document.querySelectorAll("#s-q" + state.screen + " .answer")[n-1];
+    if(btn) btn.click();
+  }
+});
+
+/* ── маска телефона ── */
+document.getElementById("f-phone").addEventListener("input", function(){ maskPhone(this); });
+
+/* ═══════════ РЕЖИМ ПРОВЕРКИ СВЯЗИ: ?check=1 ═══════════
+   Зачем. С рабочего компьютера, где включён обход DPI, всё выглядит рабочим, а с
+   телефона часть адресов молча висит. Изнутри это не увидеть — нужен взгляд со
+   стороны, то есть с телефона на обычной сети. Откройте адрес квиза с `?check=1`
+   БЕЗ обходов и VPN и пришлите скриншот: по нему видно, какая площадка годится
+   для прокси в России.
+
+   Почему запросы идут с mode:"no-cors". Чужой ответ читать не нужно — важно
+   только, ответили или нет. Обычный fetch тут не годится: без заголовков CORS он
+   падает с «Failed to fetch» даже когда сеть в полном порядке, и «недоступен»
+   получилось бы у всех подряд. С no-cors промис отклоняется только при настоящей
+   сетевой неудаче: DNS, отказ в соединении или таймаут. Ответ 404 или 403 —
+   это всё равно «доступен»: важен факт связи, а не страница. */
+const CHECK = new URLSearchParams(location.search).get("check") === "1";
+
+/* Что проверяем. ПЕРВАЯ строка — контроль: если недоступен даже Google, значит
+   интернета в этот момент нет, и весь красный список ничего не значит.
+   Дальше по строке на площадку, где можно бесплатно держать прокси.
+   Проверяем РАНТАЙМ-домены, а не сайты-витрины: у одной площадки они разные.
+   Отметки «проверено 20.09» — результат замеров с телефона Руслана. */
+const CHECK_URLS = [
+  "https://www.google.com/generate_204",                 // контроль: есть ли вообще интернет
+  "https://kvartorio-lead-proxy.netlify.app/api/submit", // НАШ ПРОКСИ. Главная строка: красная — заявки не уйдут
+  "https://kvartorio-lead-proxy.netlify.app/",           // сам сайт прокси
+  "https://www.netlify.com/",                            // площадка Netlify (витрина, а не наш адрес)
+  "https://app.netlify.com/",                            // панель Netlify
+  "https://www.cloudflare.com/",                         // Cloudflare на своём домене — доступен, значит блок идёт по имени, а не по адресам
+  "https://kvartorio-lead-proxy.kvartorio.workers.dev/", // прежний воркер на Cloudflare — НЕДОСТУПЕН с телефона
+  "https://pages.dev/",                                  // Cloudflare Pages — тоже недоступен
+  "https://fresh.deno.dev/",                             // Deno Deploy — РАНТАЙМ-домен *.deno.dev (это не то же, что deno.com!)
+  "https://dash.deno.com/",                              // Deno Deploy — панель
+  "https://functions.yandexcloud.net/",                  // Яндекс Облако
+  "https://api.github.com/",                             // GitHub API (и сам квиз живёт на GitHub Pages)
+  "https://supabase.com/",                               // Supabase
+  "https://app.koyeb.com/",                              // Koyeb
+  "https://api.telegram.org/"                            // сам Telegram API — НЕДОСТУПЕН с телефона
+];
+
+/* Номер строки-контроля в списке выше. По нему понимаем, был ли вообще интернет. */
+const CHECK_CONTROL_INDEX = 0;
+
+async function checkOne(url, timeoutMs){
+  const t0 = Date.now();
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
+  try{
+    await fetch(url, { mode:"no-cors", signal: ctl.signal, cache:"no-store" });
+    clearTimeout(timer);
+    return { ok:true, ms: Date.now() - t0 };
+  }catch(e){
+    clearTimeout(timer);
+    return { ok:false, ms: Date.now() - t0,
+             err: (e && e.name === "AbortError")
+                  ? "висит, ответа нет за " + (timeoutMs / 1000) + " с"
+                  : ((e && e.message) || "нет связи") };
+  }
+}
+
+async function runCheck(){
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  const bar = document.getElementById("bar");
+  if(bar) bar.classList.remove("on");
+  document.getElementById("backBtn").style.visibility = "hidden";
+
+  const s = document.createElement("div");
+  s.className = "screen active";
+  s.id = "s-check";
+  s.innerHTML =
+    '<div class="q-screen">' +
+      '<div class="eyebrow">Проверка связи</div>' +
+      '<h1>Что доступно из этой сети</h1>' +
+      '<div class="sub">Откройте эту страницу с телефона, без обходов и VPN, ' +
+        'и пришлите скриншот — по нему будет видно, какой адрес годится для заявок.</div>' +
+      '<div id="check-out" class="debug-box on" style="margin-top:18px">Проверяю…</div>' +
+      '<button class="btn" id="check-again" type="button" style="margin-top:16px">Проверить ещё раз</button>' +
+    '</div>';
+  document.getElementById("main").appendChild(s);
+
+  const out = document.getElementById("check-out");
+  const conn = navigator.connection || {};
+
+  const row = (name, value) =>
+    '<div class="dbg-row"><span>' + name + '</span><b>' + value + '</b></div>';
+
+  async function run(){
+    out.innerHTML = "Проверяю…";
+    const results = await Promise.all(CHECK_URLS.map(u => checkOne(u, 4000)));
+
+    const head = [
+      row("Тип сети", conn.effectiveType || "—"),
+      row("Интернет", navigator.onLine ? "есть" : "нет"),
+      row("Экономия трафика", conn.saveData ? "включена" : "выключена")
+    ].join("");
+
+    const list = CHECK_URLS.map((u, i) => {
+      const r = results[i];
+      const verdict = r.ok
+        ? '<b style="color:#16A34A">доступен за ' + r.ms + ' мс</b>'
+        : '<b style="color:#B91C1C">' + r.err + '</b>';
+      return '<div class="dbg-row"><span>' + u.replace(/^https?:\/\//, "").replace(/\/$/, "") +
+             '</span>' + verdict + '</div>';
+    }).join("");
+
+    /* Если не открылся даже контроль (Google) — интернета в этот момент нет.
+       Без этой подсказки весь красный список легко принять за блокировку, хотя
+       сеть просто не работала. Ровно так и вышло 20.09.2026: на мобильном
+       интернете покраснело всё, включая Google, — а это значит «нет связи»,
+       а не «всё заблокировано». */
+    const noNet = !(results[CHECK_CONTROL_INDEX] && results[CHECK_CONTROL_INDEX].ok);
+    const hint = noNet
+      ? '<div class="dbg-row" style="display:block;margin-top:12px">' +
+        '<b style="color:#B91C1C">Похоже, интернета сейчас нет: не открылся даже Google. ' +
+        'Включите передачу данных, подождите пару секунд и нажмите «Проверить ещё раз». ' +
+        'Пока контроль красный, этот список ничего не значит.</b></div>'
+      : '';
+
+    out.innerHTML =
+      '<div class="dbg-title">Сеть</div>' + head +
+      '<div class="dbg-title" style="margin-top:14px">Адреса</div>' + list + hint;
+  }
+
+  document.getElementById("check-again").addEventListener("click", run);
+  await run();
+}
+
+/* ── ТОЧКА ВХОДА ──
+   Прокси проверяем сразу при открытии: человек проходит квиз две минуты, за это
+   время результат готов, и на отправке ждать нечего. Если проверка не успела или
+   результат протух — sendLead() проверит ещё раз сам.
+   Стоит ПОСЛЕ объявлений: const CHECK ниже по файлу попал бы в мёртвую зону. */
+if(CHECK) runCheck(); else probeAllInBackground();
+</script>
+</body>
+</html>
